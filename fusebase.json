@@ -1,0 +1,84 @@
+{
+  "orgId": "u27r7z",
+  "productId": "wnycfrodrf8ctk4u",
+  "env": "prod",
+  "apps": [
+    {
+      "subdomain": "kasetlink-pos",
+      "name": "KasetLink POS",
+      "codingAgent": "claude_code",
+      "model": "claude-opus-5-5",
+      "access": [
+        {
+          "type": "orgRole",
+          "id": "member"
+        },
+        {
+          "type": "orgRole",
+          "id": "manager"
+        },
+        {
+          "type": "orgRole",
+          "id": "owner"
+        }
+      ],
+      "path": "apps/pos",
+      "dev": {
+        "command": "npm run dev"
+      },
+      "build": {
+        "command": "npm run build",
+        "outputDir": "dist"
+      },
+      "backend": {
+        "dev": {
+          "command": "npm run dev"
+        },
+        "build": {
+          "command": "npm run build"
+        },
+        "start": {
+          "command": "npm run start"
+        },
+        "minReplicas": 1
+      },
+      "isolatedStores": {
+        "sql": [
+          {
+            "alias": "kasetlink-pos",
+            "migrationsDir": "postgres/migrations",
+            "schemaName": "public",
+            "rlsManifestFile": "postgres/migrations/rls-manifest.json"
+          }
+        ]
+      },
+      "fusebaseGateMeta": {
+        "sdkVersion": "2.15.2",
+        "analyzedAt": "2026-10-14T08:42:35.644Z",
+        "usedOpsChangedAt": "2026-10-14T08:42:35.644Z",
+        "permissionsChangedAt": "2026-10-14T08:42:35.646Z",
+        "usedOps": [
+          "getMe",
+          "listIsolatedStores",
+          "queryIsolatedStoreSql",
+          "runIsolatedStoreSqlBatch"
+        ],
+        "permissions": [
+          "isolated_store.read"
+        ]
+      },
+      "permissions": {
+        "items": [
+          {
+            "type": "gate",
+            "privileges": [
+              "isolated_store.data.write",
+              "isolated_store.execute"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "firstAppSub": "kasetlink-pos"
+}

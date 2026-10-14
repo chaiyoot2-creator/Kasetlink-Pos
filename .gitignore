@@ -1,0 +1,73 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+out/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+
+# Coverage & caches
+coverage/
+.cache/
+*.tsbuildinfo
+.eslintcache
+
+# Archives
+*.tgz
+
+# MCP config (sensitive: URL and token)
+.cursor/mcp.json
+.vscode/mcp.json
+.mcp.json
+opencode.json
+mcp_example.json
+.codex/config.toml
+
+# Fusebase environments
+.env.*
+.fusebase/
+
+# Secrets / credentials of any kind
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.secret
+*secret*.json
+*credentials*.json
+service-account*.json
+.npmrc
+.netrc
+.claude/settings.local.json
+.claude/.credentials*
+.codex/
+.cursor/mcp.json
+
+# Agent / local tool output
+*.tmp
+_test-api.ts
+_test-sdk.ts

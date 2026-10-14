@@ -1,0 +1,22 @@
+{
+  "tables": {
+    "shop_settings": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "locations": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "terminals": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "products": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "customers": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "suppliers": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "doc_counters": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "pos_events": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "stock_lots": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "stock_movements": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "sales": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "sale_lines": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "ar_entries": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "purchase_orders": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "po_lines": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "goods_receipts": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "goods_receipt_lines": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "stock_documents": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" }
+  }
+}

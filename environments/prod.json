@@ -1,0 +1,14 @@
+{
+  "backend": "prod",
+  "orgId": "u27r7z",
+  "productId": "wnycfrodrf8ctk4u",
+  "apps": {
+    "kasetlink-pos": {
+      "stores": {
+        "kasetlink-pos": "230c9d51-f7e1-4e6c-aa32-d94d03c94b64"
+      },
+      "id": "fmxpfsohxtvosrql",
+      "subdomain": "kasetlink-pos"
+    }
+  }
+}

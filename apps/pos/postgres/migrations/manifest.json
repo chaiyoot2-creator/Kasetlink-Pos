@@ -1,0 +1,20 @@
+{
+  "bundleVersion": 2,
+  "alias": "kasetlink-pos",
+  "engine": "postgres",
+  "storeType": "sql",
+  "migrations": [
+    {
+      "version": 1,
+      "name": "init",
+      "file": "0001_init.sql",
+      "checksum": "76e81e09055fe62dba1929df45d15044e638c7efbf6d32eb1ef4b8a8fa4527ea"
+    },
+    {
+      "version": 2,
+      "name": "rls",
+      "file": "0002_rls.sql",
+      "checksum": "a738285d9272eef9dcad30181c622b31a2487632c23823d671fda98295da553f"
+    }
+  ]
+}
