@@ -112,25 +112,51 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Receipt printing: only the receipt is printed, on 80mm thermal paper. */
+/*
+ * Receipt printing. The receipt to print is rendered into #print-root (a portal
+ * directly under <body>, outside dialogs), so it is never clipped or centred by
+ * dialog styles. Paper width comes from the device's printer setting (data-paper).
+ */
+#print-root {
+  display: none;
+}
+
 @media print {
   @page {
-    size: 80mm auto;
-    margin: 4mm;
+    margin: 2mm;
   }
-  body * {
-    visibility: hidden;
+  html,
+  body {
+    background: #fff !important;
   }
-  .print-area,
-  .print-area * {
-    visibility: visible;
+  body > *:not(#print-root) {
+    display: none !important;
   }
-  .print-area {
-    position: absolute;
-    inset: 0 auto auto 0;
-    width: 72mm;
+  #print-root {
+    display: block !important;
     color: #000;
     background: #fff;
+  }
+  #print-root[data-paper="58"] {
+    width: 48mm;
+  }
+  #print-root[data-paper="80"] {
+    width: 72mm;
+  }
+  #print-root[data-paper="a4"] {
+    width: 100%;
+    max-width: 120mm;
+  }
+  /* Tax invoices: one A4 page per document. */
+  #print-root[data-paper="doc"] {
+    width: 100%;
+  }
+  #print-root[data-paper="doc"] .tax-invoice-page {
+    min-height: 270mm;
+    break-after: page;
+  }
+  #print-root[data-paper="doc"] .tax-invoice-page:last-child {
+    break-after: auto;
   }
 }
 

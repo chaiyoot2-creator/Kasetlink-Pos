@@ -40,7 +40,15 @@
         "start": {
           "command": "npm run start"
         },
-        "minReplicas": 1
+        "minReplicas": 1,
+        "jobs": [
+          {
+            "name": "sheet-backup",
+            "type": "cron",
+            "cron": "5 * * * *",
+            "command": "npm run cron:sheet-backup"
+          }
+        ]
       },
       "isolatedStores": {
         "sql": [
@@ -48,22 +56,27 @@
             "alias": "kasetlink-pos",
             "migrationsDir": "postgres/migrations",
             "schemaName": "public",
-            "rlsManifestFile": "postgres/migrations/rls-manifest.json"
+            "rlsManifestFile": "postgres/migrations/rls-manifest.json",
+            "storeId": "230c9d51-f7e1-4e6c-aa32-d94d03c94b64"
           }
         ]
       },
       "fusebaseGateMeta": {
         "sdkVersion": "2.15.2",
-        "analyzedAt": "2026-10-14T08:42:35.644Z",
-        "usedOpsChangedAt": "2026-10-14T08:42:35.644Z",
-        "permissionsChangedAt": "2026-10-14T08:42:35.646Z",
+        "analyzedAt": "2026-10-15T09:55:50.071Z",
+        "usedOpsChangedAt": "2026-10-15T09:55:50.071Z",
+        "permissionsChangedAt": "2026-10-15T09:55:50.073Z",
         "usedOps": [
+          "createBucketAttachment",
+          "createTempStoredFileUpload",
           "getMe",
           "listIsolatedStores",
           "queryIsolatedStoreSql",
+          "removeBucketAttachment",
           "runIsolatedStoreSqlBatch"
         ],
         "permissions": [
+          "files.write",
           "isolated_store.read"
         ]
       },
@@ -77,7 +90,19 @@
             ]
           }
         ]
-      }
+      },
+      "key": "kasetlink-pos",
+      "id": "fmxpfsohxtvosrql",
+      "secrets": [
+        {
+          "key": "GOOGLE_MAPS_SERVER_KEY",
+          "description": "Google Maps key for the backend (Routes API: distance matrix and route lines). Restrict to Routes API."
+        },
+        {
+          "key": "GOOGLE_MAPS_BROWSER_KEY",
+          "description": "Google Maps key for the map in the browser (Maps JavaScript API). Restrict to the app web address."
+        }
+      ]
     }
   ],
   "firstAppSub": "kasetlink-pos"

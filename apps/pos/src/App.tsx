@@ -4,7 +4,10 @@ import { AuthTokenExpiredError, getFeatureToken, onAuthExpired } from './lib/api
 import { MAGIC_LINK_ROUTE, buildLegacyMagicLinkRedirect } from './lib/magic-link'
 import { AuthExpiredModal } from './components/AuthExpiredModal'
 import { EnvPanel } from './components/EnvPanel'
-import { AppShell } from './components/AppShell'
+import { AppShell, NAV } from './components/AppShell'
+import { AuthGate, useAuth } from './lib/auth'
+import { UsersPage } from './pages/UsersPage'
+import { QuotationsPage } from './pages/QuotationsPage'
 import { ErrorBox } from './components/common'
 import { Toaster } from './components/ui/sonner'
 import { AppProvider, useApp } from './lib/app-context'
@@ -15,6 +18,11 @@ import { PurchasingPage } from './pages/PurchasingPage'
 import { StockPage } from './pages/StockPage'
 import { AlertsPage } from './pages/AlertsPage'
 import { ReportsPage } from './pages/ReportsPage'
+import { AccountingPage } from './pages/AccountingPage'
+import { ReceivablesPage } from './pages/ReceivablesPage'
+import { CustomersPage } from './pages/CustomersPage'
+import { AgencyPage } from './pages/AgencyPage'
+import { DeliveryPage } from './pages/delivery/DeliveryPage'
 import { MasterDataPage } from './pages/MasterDataPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { FirstRunSetup } from './pages/FirstRunSetup'
@@ -104,9 +112,11 @@ function AppContent() {
   return (
     <>
       {appToken ? (
-        <AppProvider fallback={(s) => <Splash error={s.error} retry={s.retry} />}>
-          <Routed />
-        </AppProvider>
+        <AuthGate>
+          <AppProvider fallback={(s) => <Splash error={s.error} retry={s.retry} />}>
+            <Routed />
+          </AppProvider>
+        </AuthGate>
       ) : (
         <Splash error={null} retry={() => window.location.reload()} />
       )}
@@ -117,8 +127,17 @@ function AppContent() {
 
 function Routed() {
   const { data } = useApp()
+  const { can } = useAuth()
   const [route, go] = useHashRoute('pos')
-  if (data.locations.length === 0) return <FirstRunSetup />
+  const allowed = NAV.filter((n) => can(...n.perms))
+  const current = NAV.find((n) => n.route === route)
+  // Pages this account may not open fall back to the first one it may.
+  useEffect(() => {
+    if ((!current || !can(...current.perms)) && allowed[0] && allowed[0].route !== route) go(allowed[0].route)
+  }, [route])
+  if (data.locations.length === 0) return can('settings') ? <FirstRunSetup /> : <Splash error="ร้านยังไม่ได้ตั้งค่าสาขา — ให้เจ้าของร้านเข้าสู่ระบบเพื่อตั้งค่าก่อน" retry={() => window.location.reload()} />
+  if (allowed.length === 0) return <Splash error="บัญชีนี้ยังไม่มีสิทธิ์ใช้งานเมนูใด — ติดต่อเจ้าของร้าน" retry={() => window.location.reload()} />
+  if (!current || !can(...current.perms)) return null
   return (
     <AppShell route={route} go={go}>
       {route === 'pos' && <PosPage />}
@@ -127,8 +146,15 @@ function Routed() {
       {route === 'stock' && <StockPage />}
       {route === 'alerts' && <AlertsPage />}
       {route === 'reports' && <ReportsPage />}
+      {route === 'accounting' && <AccountingPage />}
+      {route === 'receivables' && <ReceivablesPage />}
+      {route === 'customers' && <CustomersPage />}
+      {route === 'agency' && <AgencyPage />}
+      {route === 'delivery' && <DeliveryPage />}
       {route === 'master' && <MasterDataPage />}
       {route === 'settings' && <SettingsPage />}
+      {route === 'users' && <UsersPage />}
+      {route === 'quotations' && <QuotationsPage />}
     </AppShell>
   )
 }

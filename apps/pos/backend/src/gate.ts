@@ -1,6 +1,7 @@
 import {
   AccessApi,
   ApiError,
+  FilesApi,
   IsolatedStoresApi,
   createClient,
   type IsolatedStoreSqlBatchOperationContract,
@@ -42,6 +43,10 @@ function createGateSdkClient(appToken: string) {
 
 export function createAccessApi(appToken: string): AccessApi {
   return new AccessApi(createGateSdkClient(appToken))
+}
+
+export function createFilesApi(appToken: string): FilesApi {
+  return new FilesApi(createGateSdkClient(appToken))
 }
 
 export function createIsolatedStoresApi(appToken: string): IsolatedStoresApi {
@@ -156,6 +161,18 @@ export async function buildRequestCtx(c: Context): Promise<RequestCtx> {
   }
 }
 
+/**
+ * Context for scheduled jobs (no visitor): the deploy-time service token. Local runs may
+ * fall back to GATE_MCP_TOKEN, never in the browser.
+ */
+export async function buildSystemCtx(): Promise<RequestCtx> {
+  const token = process.env.FBS_FEATURE_TOKEN?.trim() || process.env.GATE_MCP_TOKEN?.trim()
+  if (!token) throw new Error('FBS_FEATURE_TOKEN is not set')
+  const identity = await loadIdentity(token)
+  const storeId = await resolveStoreId(token, identity.orgId)
+  return { token, orgId: identity.orgId, userId: 'system', orgRole: null, storeId, stage: resolveStage() }
+}
+
 function storePath(ctx: RequestCtx) {
   return { orgId: ctx.orgId, storeId: ctx.storeId, stage: ctx.stage }
 }
@@ -165,6 +182,10 @@ function mapSqlError(err: unknown, guards: Map<number, string>): never {
   if (err instanceof ApiError) {
     if (err.status === 401 || err.status === 403) mapGateError(err, '')
     const text = JSON.stringify(err.body ?? err.message)
+    if (/ECONNREFUSED|connection timeout|timeout exceeded when trying to connect|starting up|too many clients/i.test(text)) {
+      console.error('[sql] database unavailable', text)
+      throw new HttpError(503, 'ฐานข้อมูลของ FuseBase ขัดข้องชั่วคราว รอสักครู่แล้วกดลองใหม่ (ข้อมูลไม่หาย)', 'db_unavailable')
+    }
     const indexMatch = /operations\[(\d+)\]/i.exec(text) ?? /index[^0-9]{0,12}(\d+)/i.exec(text)
     const failedIndex = indexMatch ? Number(indexMatch[1]) : -1
     if (/division by zero/i.test(text) && guards.has(failedIndex)) {
@@ -176,7 +197,11 @@ function mapSqlError(err: unknown, guards: Map<number, string>): never {
     if (/stock_lots_qty_check|violates check constraint "stock_lots/i.test(text)) {
       throw new HttpError(409, 'สต็อกไม่พอ (มีรายการอื่นตัดสต็อกไปก่อน) กรุณาลองใหม่', 'stock_conflict')
     }
+    if (/violates foreign key/i.test(text)) {
+      throw new HttpError(409, 'ข้อมูลนี้ถูกใช้งานอยู่ หรืออ้างอิงข้อมูลที่ถูกลบไปแล้ว', 'in_use')
+    }
     if (/duplicate key/i.test(text)) {
+      if (/brands_org_id_name/.test(text)) throw new HttpError(409, 'ชื่อแบรนด์นี้มีอยู่แล้ว', 'duplicate')
       if (/products_org_barcode_uidx/.test(text)) throw new HttpError(409, 'บาร์โค้ดนี้ถูกใช้กับสินค้าอื่นแล้ว', 'duplicate')
       if (/sku/.test(text)) throw new HttpError(409, 'รหัสสินค้านี้มีอยู่แล้ว', 'duplicate')
       if (/code/.test(text)) throw new HttpError(409, 'รหัสนี้มีอยู่แล้ว', 'duplicate')

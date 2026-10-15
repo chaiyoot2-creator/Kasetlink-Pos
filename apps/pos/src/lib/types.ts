@@ -1,6 +1,5 @@
 // Response shapes of the app backend (`/api/*`). The backend owns its own copies.
 
-export type PriceTier = 'retail' | 'wholesale' | 'member'
 export type PaymentMethod = 'cash' | 'promptpay' | 'credit'
 
 export interface Settings {
@@ -11,6 +10,12 @@ export interface Settings {
   promptpayId: string | null
   receiptFooter: string | null
   expiryAlertDays: number
+  /** Names of price levels 1..5. */
+  priceLevelNames: string[]
+  vatRegistered: boolean
+  vatRate: number
+  /** Shop branch code for tax invoices (00000 = head office). */
+  branchCode: string
 }
 
 export interface Location {
@@ -42,15 +47,32 @@ export interface Product {
   name: string
   category: string | null
   unit: string
-  priceRetail: number
-  priceWholesale: number
-  priceMember: number
+  /** Prices for levels 1..5 (0 = not set). */
+  priceLevels: number[]
   avgCost: number
   reorderPoint: number
   trackExpiry: boolean
   isActive: boolean
   qtyTotal: number
   qtyHere: number
+  brandId: string | null
+  brandName: string | null
+  /** Supplier of the product's brand. */
+  supplierId: string | null
+  supplierName: string | null
+  imageUrl?: string | null
+  /** Weight of one selling unit (sack), kg; null = from the name / feed kind. */
+  weightKg?: number | null
+}
+
+export interface Brand {
+  id: string
+  name: string
+  supplierId: string
+  supplierName: string | null
+  note: string | null
+  isActive: boolean
+  productCount: number
 }
 
 export interface Customer {
@@ -58,7 +80,16 @@ export interface Customer {
   code: string
   name: string
   phone: string | null
-  customerType: PriceTier
+  /** Price level 1..5. */
+  priceLevel: number
+  fixedPriceCount: number
+  taxId: string | null
+  address: string | null
+  branchCode: string | null
+  /** Bills of this customer default to a full tax invoice for the accounting office. */
+  sendToAccounting: boolean
+  /** Days of credit; each credit bill is due sold date + this. */
+  creditTermDays: number
   creditLimit: number
   balance: number
   note: string | null
@@ -78,6 +109,7 @@ export interface SaleResult {
   billNo: string
   total: number
   change: number | null
+  taxInvoiceNo?: string | null
   duplicate: boolean
 }
 
@@ -90,7 +122,7 @@ export interface SaleHeader {
   locationName: string | null
   customerId: string | null
   customerName: string | null
-  priceTier: PriceTier
+  priceLevel: number
   subtotal: number
   lineDiscountTotal: number
   billDiscount: number
@@ -105,6 +137,25 @@ export interface SaleHeader {
   note: string | null
   soldAt: string
   createdBy: string | null
+  forAccounting: boolean
+  taxInvoiceNo: string | null
+  taxInvoiceAt: string | null
+  vatRate: number | null
+  vatAmount: number | null
+  buyer: Buyer | null
+  accountingSentAt: string | null
+  /** Credit bills: payment due date (YYYY-MM-DD). */
+  dueDate: string | null
+}
+
+/** Buyer details frozen on the bill when its tax invoice was issued. */
+export interface Buyer {
+  name: string
+  code: string | null
+  taxId: string | null
+  address: string | null
+  branchCode: string | null
+  phone: string | null
 }
 
 export interface SaleDetail extends SaleHeader {
@@ -112,6 +163,7 @@ export interface SaleDetail extends SaleHeader {
     lineNo: number
     productId: string
     productName: string
+    imageUrl?: string | null
     unit: string
     qty: number
     unitPrice: number
@@ -121,6 +173,7 @@ export interface SaleDetail extends SaleHeader {
     netAmount: number
     unitCost: number
     costTotal: number
+    priceSource: string | null
   }[]
   lots: { productId: string; lotNo: string; expiryDate: string | null; qty: number }[]
 }
@@ -202,7 +255,16 @@ export interface Movement {
   terminalId: string
   zoneId: string
   occurredAt: string
-  movementType: 'sale' | 'sale_void' | 'receive' | 'transfer_out' | 'transfer_in' | 'adjust'
+  movementType:
+    | 'sale'
+    | 'sale_void'
+    | 'receive'
+    | 'transfer_out'
+    | 'transfer_in'
+    | 'adjust'
+    | 'agency_lend'
+    | 'agency_lend_void'
+    | 'agency_return'
   productId: string
   productName: string
   unit: string
@@ -232,6 +294,7 @@ export interface StockDocument {
 
 export interface Alerts {
   expiryAlertDays: number
+  receivables: ReceivablesSummary
   lowStock: { productId: string; sku: string; name: string; unit: string; reorderPoint: number; qty: number }[]
   expired: Lot[]
   nearExpiry: Lot[]
@@ -314,5 +377,64 @@ export interface LedgerEntry {
   paymentMethod: string | null
   note: string | null
   billNo: string | null
+  receiptNo: string | null
   createdAt: string
+}
+
+export interface CustomerPrice {
+  productId: string
+  productName: string
+  sku: string
+  unit: string
+  brandName: string | null
+  price: number
+  /** Product price at the customer's level, for comparison. */
+  levelPrice: number
+  note: string | null
+  updatedAt: string
+}
+
+/** A credit bill not yet fully paid (payments settle the oldest bills first). */
+export interface OpenBill {
+  saleId: string
+  customerId: string
+  customerName: string
+  customerCode: string
+  customerPhone: string | null
+  billNo: string
+  taxInvoiceNo: string | null
+  soldAt: string
+  dueDate: string
+  total: number
+  paid: number
+  outstanding: number
+  /** > 0 overdue by N days, 0 due today, < 0 due in N days. */
+  daysOverdue: number
+}
+
+export interface ReceivablesSummary {
+  outstanding: number
+  overdue: number
+  overdueCount: number
+  dueSoon: number
+  dueSoonCount: number
+}
+
+/** Receipt (ใบเสร็จรับเงิน) for one debt payment and the bills it settled. */
+export interface PaymentReceipt {
+  paymentId: string
+  receiptNo: string | null
+  amount: number
+  method: string | null
+  note: string | null
+  paidAt: string
+  customer: { id: string; name: string; code: string; address: string | null; taxId: string | null; phone: string | null }
+  bills: { saleId: string; billNo: string; taxInvoiceNo: string | null; soldAt: string; dueDate: string | null; total: number; amount: number }[]
+}
+
+export interface Ledger {
+  customer: Customer
+  openBills: OpenBill[]
+  summary: { outstanding: number; overdue: number; unappliedCredit: number }
+  entries: LedgerEntry[]
 }

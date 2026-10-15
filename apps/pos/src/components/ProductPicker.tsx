@@ -80,6 +80,7 @@ export function ProductPicker({
                   <p className="text-xs text-muted-foreground">
                     {p.sku}
                     {p.barcode ? ` · ${p.barcode}` : ''}
+                    {p.brandName ? ` · ${p.brandName}` : ''}
                   </p>
                 </div>
                 <span className="tabular shrink-0 text-sm text-muted-foreground">

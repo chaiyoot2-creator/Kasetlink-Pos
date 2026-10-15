@@ -4,10 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsup src/index.ts --format esm --out-dir dist",
+    "build": "tsup src/index.ts src/jobs/sheet-backup.ts --format esm --out-dir dist",
     "start": "node dist/index.js",
     "lint": "eslint . --max-warnings 0",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "cron:sheet-backup": "node dist/jobs/sheet-backup.js"
   },
   "dependencies": {
     "@fusebase/fusebase-gate-sdk": "^2.15.2",

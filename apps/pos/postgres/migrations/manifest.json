@@ -1,5 +1,5 @@
 {
-  "bundleVersion": 2,
+  "bundleVersion": 14,
   "alias": "kasetlink-pos",
   "engine": "postgres",
   "storeType": "sql",
@@ -15,6 +15,78 @@
       "name": "rls",
       "file": "0002_rls.sql",
       "checksum": "a738285d9272eef9dcad30181c622b31a2487632c23823d671fda98295da553f"
+    },
+    {
+      "version": 3,
+      "name": "brands",
+      "file": "0003_brands.sql",
+      "checksum": "11c67eeb755e9ddfd464ac927809f1ccfed532fc6ca15da764f47923adf35a20"
+    },
+    {
+      "version": 4,
+      "name": "price_levels",
+      "file": "0004_price_levels.sql",
+      "checksum": "158660465d79c8a518290d3d324f7404b30161c3bac50b446088a64d94a77987"
+    },
+    {
+      "version": 5,
+      "name": "accounting",
+      "file": "0005_accounting.sql",
+      "checksum": "8e1f430545eeec1fae51a0bcb03670394eb548212b78494aeb501ecc6e1e9c58"
+    },
+    {
+      "version": 6,
+      "name": "credit_terms",
+      "file": "0006_credit_terms.sql",
+      "checksum": "2b0aa1bcc2481c68420dc211118aadf710bc371e015726f6395bb76741a82c5f"
+    },
+    {
+      "version": 7,
+      "name": "payment_allocations",
+      "file": "0007_payment_allocations.sql",
+      "checksum": "d6946a5a94d802297bc8e96486405009f8e8db527c41134b8effb768da661cb0"
+    },
+    {
+      "version": 8,
+      "name": "sheet_backup",
+      "file": "0008_sheet_backup.sql",
+      "checksum": "020b94eef990d2cc03aad0d0a77468e7539bc24ab1032b5a9bb47c83a8e4c4eb"
+    },
+    {
+      "version": 9,
+      "name": "product_images",
+      "file": "0009_product_images.sql",
+      "checksum": "139b85a1335437e46204e17b0f00851a0597c99460129d5d2f4bedc0521da723"
+    },
+    {
+      "version": 10,
+      "name": "farmsuk_agency",
+      "file": "0010_farmsuk_agency.sql",
+      "checksum": "069e953633de451e5981a8747077b64d4d723e1bf9985bb6ae9dafca26c81201"
+    },
+    {
+      "version": 11,
+      "name": "farmsuk_stock_loans",
+      "file": "0011_farmsuk_stock_loans.sql",
+      "checksum": "4ab4506d88e6fca6b50d87e82452205fda66f1b5d13bde63ccee2561c7ae33d9"
+    },
+    {
+      "version": 12,
+      "name": "delivery_routing",
+      "file": "0012_delivery_routing.sql",
+      "checksum": "0d173516264e95ddb2cb53ab40c8c4471b0c73f951ad217e860649e2227881dd"
+    },
+    {
+      "version": 13,
+      "name": "app_users",
+      "file": "0013_app_users.sql",
+      "checksum": "7dc56094b2e43f3f68df2e65850a83e34118a0859d353c5befd0f13c6e3bd128"
+    },
+    {
+      "version": 14,
+      "name": "quotations",
+      "file": "0014_quotations.sql",
+      "checksum": "5570a4d1b872f820780743f6999a9e95e852aa2695647aec28b1e9f5cb340938"
     }
   ]
 }

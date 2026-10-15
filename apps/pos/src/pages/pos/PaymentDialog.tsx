@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { toDataURL } from 'qrcode'
-import { Banknote, Loader2, NotebookPen, QrCode } from 'lucide-react'
+import { Banknote, FileText, Loader2, NotebookPen, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { NumberInput } from '@/components/common'
 import { useApp } from '@/lib/app-context'
-import { baht, round2 } from '@/lib/format'
+import { addDaysISO, baht, dateOnly, round2, todayISO } from '@/lib/format'
 import { isValidPromptPayId, promptPayPayload } from '@/lib/promptpay'
 import type { Customer, PaymentMethod } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -27,20 +28,22 @@ export function PaymentDialog({
   busy: boolean
   error: string | null
   onClose: () => void
-  onConfirm: (method: PaymentMethod, cashReceived: number | null) => void
+  onConfirm: (method: PaymentMethod, cashReceived: number | null, forAccounting: boolean) => void
 }) {
   const { data } = useApp()
   const [method, setMethod] = useState<PaymentMethod>('cash')
   const [cash, setCash] = useState<number | null>(null)
   const [qr, setQr] = useState<string | null>(null)
+  const [forAccounting, setForAccounting] = useState(false)
   const promptpayId = data.settings.promptpayId
 
   useEffect(() => {
     if (open) {
       setMethod('cash')
       setCash(null)
+      setForAccounting(customer?.sendToAccounting ?? false)
     }
-  }, [open])
+  }, [open, customer])
 
   useEffect(() => {
     if (method !== 'promptpay' || !isValidPromptPayId(promptpayId) || !promptpayId) {
@@ -67,7 +70,7 @@ export function PaymentDialog({
       (method === 'credit' && !creditBlocked))
 
   const confirm = () => {
-    if (canConfirm) onConfirm(method, method === 'cash' ? received : null)
+    if (canConfirm) onConfirm(method, method === 'cash' ? received : null, forAccounting && customer !== null)
   }
 
   return (
@@ -152,11 +155,33 @@ export function PaymentDialog({
               <>
                 <p className="tabular">ยอดค้างเดิม {baht(customer.balance)} · วงเงิน {baht(customer.creditLimit)}</p>
                 <p className="tabular">หลังขายบิลนี้ ค้าง {baht(customer.balance + total)}</p>
+                <p>
+                  เครดิต {customer.creditTermDays} วัน · ครบกำหนดชำระ {dateOnly(addDaysISO(todayISO(), customer.creditTermDays))}
+                </p>
               </>
             ) : null}
             {creditBlocked ? <p className="font-medium text-destructive">{creditBlocked}</p> : null}
           </div>
         ) : null}
+
+        <label
+          className={`flex items-center justify-between gap-3 rounded-lg border p-3 text-sm ${customer ? 'cursor-pointer' : 'opacity-60'}`}
+        >
+          <span className="flex items-start gap-2">
+            <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <span>
+              ส่งบัญชี (ออกใบเสร็จเต็มรูป)
+              <span className="block text-xs text-muted-foreground">
+                {customer
+                  ? customer.taxId
+                    ? `ผู้ซื้อ ${customer.name} · เลขผู้เสียภาษี ${customer.taxId}`
+                    : 'ลูกค้านี้ยังไม่มีเลขผู้เสียภาษี/ที่อยู่ — เพิ่มได้ที่ข้อมูลลูกค้า'
+                  : 'ต้องเลือกลูกค้าก่อน'}
+              </span>
+            </span>
+          </span>
+          <Switch checked={forAccounting && customer !== null} disabled={!customer} onCheckedChange={setForAccounting} />
+        </label>
 
         {error ? <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">{error}</p> : null}
 

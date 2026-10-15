@@ -71,3 +71,5 @@ service-account*.json
 *.tmp
 _test-api.ts
 _test-sdk.ts
+apps/pos/dev-test-accounts.local.md
+.playwright-mcp/

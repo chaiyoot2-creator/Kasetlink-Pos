@@ -1,7 +1,7 @@
-import { AlertTriangle, CalendarClock, PackageX } from 'lucide-react'
+import { AlertTriangle, CalendarClock, HandCoins, PackageX } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Empty, ErrorBox, Loading, PageHeader, Stat, TableWrap } from '@/components/common'
-import { qty } from '@/lib/format'
+import { baht, qty } from '@/lib/format'
 import type { Alerts, Lot } from '@/lib/types'
 import { useApi } from '@/lib/use-api'
 import { ExpiryBadge } from './StockPage'
@@ -16,6 +16,19 @@ export function AlertsPage() {
       {loading && !data ? <Loading /> : null}
       {data ? (
         <div className="grid gap-5">
+          {data.receivables.overdueCount > 0 || data.receivables.dueSoonCount > 0 ? (
+            <a
+              href="#/receivables"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm"
+            >
+              <span className="flex items-center gap-2 font-medium">
+                <HandCoins className="size-4 text-destructive" />
+                ลูกหนี้: เกินกำหนด {data.receivables.overdueCount} บิล ({baht(data.receivables.overdue)} บาท) · ครบกำหนดใน 7 วัน{' '}
+                {data.receivables.dueSoonCount} บิล ({baht(data.receivables.dueSoon)} บาท)
+              </span>
+              <span className="text-primary underline">ไปที่หน้าลูกหนี้</span>
+            </a>
+          ) : null}
           <div className="grid grid-cols-3 gap-2">
             <Stat label="สต็อกต่ำ" value={data.lowStock.length} tone={data.lowStock.length ? 'warn' : undefined} />
             <Stat label="ใกล้หมดอายุ" value={data.nearExpiry.length} tone={data.nearExpiry.length ? 'warn' : undefined} />

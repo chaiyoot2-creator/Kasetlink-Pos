@@ -242,7 +242,7 @@
     "/products": {
       "get": {
         "operationId": "listProducts",
-        "summary": "Search products with stock on hand",
+        "summary": "Search products with stock on hand (filter by brand or supplier)",
         "x-fusebase-visibility": "org",
         "x-fusebase-execution-mode": "sync",
         "responses": {
@@ -299,12 +299,28 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "brandId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "supplierId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ]
       },
       "post": {
         "operationId": "createProduct",
-        "summary": "Create a product",
+        "summary": "Create a product (empty sku / barcode are auto-generated)",
         "x-fusebase-visibility": "private",
         "x-fusebase-execution-mode": "sync",
         "responses": {
@@ -338,6 +354,43 @@
             }
           }
         }
+      }
+    },
+    "/products/quick": {
+      "get": {
+        "operationId": "getQuickPickProducts",
+        "summary": "POS quick picks at a location: best sellers (30 days), recently sold, in stock",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "locationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     },
     "/products/lookup": {
@@ -383,6 +436,33 @@
             }
           }
         ]
+      }
+    },
+    "/next-codes": {
+      "get": {
+        "operationId": "getNextCodes",
+        "summary": "Next auto-generated product SKU, in-store EAN-13 barcode and customer code",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        }
       }
     },
     "/products/{id}": {
@@ -435,6 +515,169 @@
         }
       }
     },
+    "/brands": {
+      "get": {
+        "operationId": "listBrands",
+        "summary": "List brands with their supplier and product count",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "supplierId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createBrand",
+        "summary": "Create a brand linked to a supplier",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/brands/{id}": {
+      "put": {
+        "operationId": "updateBrand",
+        "summary": "Update a brand",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteBrand",
+        "summary": "Delete a brand that has no products",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
     "/customers": {
       "get": {
         "operationId": "listCustomers",
@@ -484,7 +727,7 @@
       },
       "post": {
         "operationId": "createCustomer",
-        "summary": "Create a customer",
+        "summary": "Create a customer (empty code is auto-generated)",
         "x-fusebase-visibility": "private",
         "x-fusebase-execution-mode": "sync",
         "responses": {
@@ -611,7 +854,7 @@
     "/customers/{id}/payments": {
       "post": {
         "operationId": "receiveCustomerPayment",
-        "summary": "Receive a debt payment (emits ar.payment_received)",
+        "summary": "Receive a debt payment for chosen (or oldest) credit bills and issue a receipt RCyyyymm-nnnn (emits ar.payment_received)",
         "x-fusebase-visibility": "private",
         "x-fusebase-execution-mode": "sync",
         "responses": {
@@ -671,6 +914,217 @@
             }
           }
         }
+      }
+    },
+    "/customers/{id}/prices": {
+      "get": {
+        "operationId": "listCustomerFixedPrices",
+        "summary": "Fixed prices for one customer (with the customer-level price for comparison)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "setCustomerFixedPrice",
+        "summary": "Set a customer fixed price for one product",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers/{id}/prices/{productId}": {
+      "delete": {
+        "operationId": "deleteCustomerFixedPrice",
+        "summary": "Remove a customer fixed price (falls back to the customer level)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/payments/{id}": {
+      "get": {
+        "operationId": "getPaymentReceipt",
+        "summary": "Debt-payment receipt with the bills it settled",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/receivables": {
+      "get": {
+        "operationId": "listReceivables",
+        "summary": "Unpaid credit bills of all customers with due dates (filter all / overdue / due7)",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     },
     "/suppliers": {
@@ -793,7 +1247,7 @@
     "/sales": {
       "post": {
         "operationId": "createSale",
-        "summary": "Post a sale bill (emits sale.completed; idempotent on eventId)",
+        "summary": "Post a sale bill at a price level 1-5 (emits sale.completed; idempotent on eventId)",
         "x-fusebase-visibility": "private",
         "x-fusebase-execution-mode": "sync",
         "responses": {
@@ -995,6 +1449,2866 @@
                     "description": "When the action happened on the device"
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sales/{id}/tax-invoice": {
+      "post": {
+        "operationId": "issueTaxInvoice",
+        "summary": "Issue a full tax invoice for an existing bill (emits sale.tax_invoice_issued)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "eventId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Client-generated event id (idempotency key, pos_events.event_id)"
+                  },
+                  "terminalId": {
+                    "type": "string",
+                    "description": "Device id (pos_events.terminal_id)"
+                  },
+                  "occurredAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When the action happened on the device"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/accounting/invoices": {
+      "get": {
+        "operationId": "listAccountingInvoices",
+        "summary": "Bills with full tax invoices for the accounting office",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/accounting/documents": {
+      "get": {
+        "operationId": "getAccountingDocuments",
+        "summary": "Full invoice documents (header and lines) for printing",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/insights/customers": {
+      "get": {
+        "operationId": "listCustomerInsights",
+        "summary": "Per-customer purchase totals (bills, qty, revenue, profit) in a date range",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/insights/customers/{id}": {
+      "get": {
+        "operationId": "getCustomerInsight",
+        "summary": "One customer: products bought, categories, brands, monthly trend and bills",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backup": {
+      "get": {
+        "operationId": "getSheetBackup",
+        "summary": "Google Sheet backup settings, last result and Apps Script code",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateSheetBackup",
+        "summary": "Save Google Sheet backup URL and schedule",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backup/secret": {
+      "post": {
+        "operationId": "rotateSheetBackupSecret",
+        "summary": "Generate a new shared secret for the Apps Script",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backup/test": {
+      "post": {
+        "operationId": "testSheetBackup",
+        "summary": "Check the Apps Script web app answers with the shared secret",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backup/run": {
+      "post": {
+        "operationId": "runSheetBackup",
+        "summary": "Start a backup to Google Sheet now (poll GET /backup for the result)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/uploads/product-image": {
+      "post": {
+        "operationId": "createProductImageUpload",
+        "summary": "Presigned URL for uploading a resized product photo (max 500 KB JPEG)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products/{id}/image": {
+      "put": {
+        "operationId": "setProductImage",
+        "summary": "Attach an uploaded photo to a product (replaces the old one)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeProductImage",
+        "summary": "Remove the product photo",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/agency/setup": {
+      "get": {
+        "operationId": "getAgencySetup",
+        "summary": "Farmsuk agency: customer groups (incentive %), routes (per-sack fee), products (standard price), customers",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        }
+      }
+    },
+    "/agency/groups": {
+      "post": {
+        "operationId": "createAgencyGroup",
+        "summary": "Add a customer group with its incentive percent",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agency/groups/{id}": {
+      "put": {
+        "operationId": "updateAgencyGroup",
+        "summary": "Edit a customer group",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agency/routes": {
+      "post": {
+        "operationId": "createAgencyRoute",
+        "summary": "Add a transport route with its per-sack fee",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agency/routes/{id}": {
+      "put": {
+        "operationId": "updateAgencyRoute",
+        "summary": "Edit a transport route",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agency/products": {
+      "post": {
+        "operationId": "createAgencyProduct",
+        "summary": "Add a Farmsuk product with its standard price",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agency/products/{id}": {
+      "put": {
+        "operationId": "updateAgencyProduct",
+        "summary": "Edit a Farmsuk product",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agency/customers": {
+      "post": {
+        "operationId": "createAgencyCustomer",
+        "summary": "Add a Farmsuk customer with default group and route",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agency/customers/{id}": {
+      "put": {
+        "operationId": "updateAgencyCustomer",
+        "summary": "Edit a Farmsuk customer",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agency/deliveries": {
+      "get": {
+        "operationId": "listAgencyDeliveries",
+        "summary": "Farmsuk deliveries in a date range",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createAgencyDelivery",
+        "summary": "Record a Farmsuk delivery (no shop stock); computes incentive and transport income",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "eventId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Client-generated event id (idempotency key, pos_events.event_id)"
+                  },
+                  "terminalId": {
+                    "type": "string",
+                    "description": "Device id (pos_events.terminal_id)"
+                  },
+                  "occurredAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When the action happened on the device"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agency/deliveries/{id}": {
+      "get": {
+        "operationId": "getAgencyDelivery",
+        "summary": "One Farmsuk delivery with lines",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/agency/deliveries/{id}/void": {
+      "post": {
+        "operationId": "voidAgencyDelivery",
+        "summary": "Void a Farmsuk delivery with a reason",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "eventId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Client-generated event id (idempotency key, pos_events.event_id)"
+                  },
+                  "terminalId": {
+                    "type": "string",
+                    "description": "Device id (pos_events.terminal_id)"
+                  },
+                  "occurredAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When the action happened on the device"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agency/months": {
+      "get": {
+        "operationId": "listAgencyMonths",
+        "summary": "Monthly expected incentive + transport, received and outstanding",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/agency/months/{month}": {
+      "get": {
+        "operationId": "getAgencyMonth",
+        "summary": "One month by group, by route, deliveries and payments",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}$"
+            }
+          }
+        ]
+      }
+    },
+    "/agency/payments": {
+      "post": {
+        "operationId": "createAgencyPayment",
+        "summary": "Record money transferred by Farmsuk for a sales month",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agency/payments/{id}": {
+      "delete": {
+        "operationId": "deleteAgencyPayment",
+        "summary": "Remove a payment entered by mistake",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/agency/loans": {
+      "get": {
+        "operationId": "listAgencyStockLoans",
+        "summary": "Shop stock delivered for Farmsuk and not yet replaced: per product and history",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        }
+      }
+    },
+    "/agency/returns": {
+      "post": {
+        "operationId": "receiveAgencyStockReturn",
+        "summary": "Receive replacement goods from Farmsuk back into shop stock at the original cost",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "eventId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Client-generated event id (idempotency key, pos_events.event_id)"
+                  },
+                  "terminalId": {
+                    "type": "string",
+                    "description": "Device id (pos_events.terminal_id)"
+                  },
+                  "occurredAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When the action happened on the device"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/maps/config": {
+      "get": {
+        "operationId": "getMapsConfig",
+        "summary": "Google Maps browser key (referrer-restricted) and whether road distances are available",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        }
+      }
+    },
+    "/delivery/places": {
+      "get": {
+        "operationId": "listDeliveryPlaces",
+        "summary": "Shop branches, POS customers and Farmsuk customers with their map pins",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        }
+      }
+    },
+    "/delivery/places/{kind}/{id}": {
+      "put": {
+        "operationId": "setDeliveryPlacePin",
+        "summary": "Set the lat/lng pin and details of a branch or customer",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "location",
+                "customer",
+                "agency"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeDeliveryPlacePin",
+        "summary": "Remove the map pin of a branch or customer",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "location",
+                "customer",
+                "agency"
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/delivery/vehicles": {
+      "get": {
+        "operationId": "listVehicles",
+        "summary": "Delivery vehicles with capacity",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createVehicle",
+        "summary": "Add a delivery vehicle",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery/vehicles/{id}": {
+      "put": {
+        "operationId": "updateVehicle",
+        "summary": "Edit a delivery vehicle",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery/orders": {
+      "get": {
+        "operationId": "listDeliveryOrders",
+        "summary": "Delivery orders for a date range",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createDeliveryOrder",
+        "summary": "Enter a delivery order (bags and weight computed)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery/orders/{id}": {
+      "get": {
+        "operationId": "getDeliveryOrder",
+        "summary": "One delivery order with lines and weights",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "updateDeliveryOrder",
+        "summary": "Change delivery date / status / pin of an order",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery/orders/from-sale/{saleId}": {
+      "post": {
+        "operationId": "createDeliveryOrderFromSale",
+        "summary": "Create a delivery order from a POS bill",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "saleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery/plan": {
+      "post": {
+        "operationId": "planDeliveryRoutes",
+        "summary": "Choose vehicles by weight, split stops and compute the shortest route per vehicle (preview)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delivery/trips": {
+      "post": {
+        "operationId": "saveDeliveryTrips",
+        "summary": "Save planned trips with stop order",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listDeliveryTrips",
+        "summary": "Delivery trips for a date range",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/delivery/trips/{id}": {
+      "get": {
+        "operationId": "getDeliveryTrip",
+        "summary": "One trip with stops, goods and route line",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/delivery/trips/{id}/status": {
+      "post": {
+        "operationId": "setDeliveryTripStatus",
+        "summary": "Finish or cancel a trip",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/status": {
+      "get": {
+        "operationId": "getAuthStatus",
+        "summary": "Whether the shop needs its owner account, and the staff member signed in on this device",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        }
+      }
+    },
+    "/auth/setup": {
+      "post": {
+        "operationId": "setupOwnerAccount",
+        "summary": "Create the first owner account (only while no users exist)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "loginStaff",
+        "summary": "Staff login with username and password; returns a session token",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "logoutStaff",
+        "summary": "Clear the staff session cookie",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "operationId": "changeOwnPassword",
+        "summary": "Change the signed-in user password",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/users": {
+      "get": {
+        "operationId": "listStaffUsers",
+        "summary": "Staff accounts (owner only)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createStaffUser",
+        "summary": "Create a staff account (owner only)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/users/{id}": {
+      "put": {
+        "operationId": "updateStaffUser",
+        "summary": "Edit a staff account: role, active, new password, unlock (owner only)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/roles": {
+      "get": {
+        "operationId": "listStaffRoles",
+        "summary": "Roles and their permissions (owner only)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createStaffRole",
+        "summary": "Add a role (owner only)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/roles/{id}": {
+      "put": {
+        "operationId": "updateStaffRole",
+        "summary": "Edit a role name and permissions (owner only)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteStaffRole",
+        "summary": "Delete an unused role (owner only)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/quotations": {
+      "get": {
+        "operationId": "listQuotations",
+        "summary": "Quotations in a date range",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createQuotation",
+        "summary": "Issue a quotation (prices fixed at quoting time)",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quotations/{id}": {
+      "get": {
+        "operationId": "getQuotation",
+        "summary": "One quotation with lines and current product data (for loading into the POS cart)",
+        "x-fusebase-visibility": "org",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "locationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "updateQuotation",
+        "summary": "Edit an open quotation",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quotations/{id}/cancel": {
+      "post": {
+        "operationId": "cancelQuotation",
+        "summary": "Cancel an open quotation with a reason",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/accounting/mark-sent": {
+      "post": {
+        "operationId": "markAccountingSent",
+        "summary": "Mark invoices as handed to (or taken back from) the accounting office",
+        "x-fusebase-visibility": "private",
+        "x-fusebase-execution-mode": "sync",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input (Thai message in `error`)"
+          },
+          "409": {
+            "description": "Business rule conflict, e.g. insufficient stock or credit limit"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {}
               }
             }
           }

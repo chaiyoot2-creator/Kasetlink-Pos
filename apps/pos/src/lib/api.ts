@@ -129,6 +129,45 @@ export class ApiFailure extends Error {
   }
 }
 
+// ---------------------------------------------------------------- shop staff session
+
+const SESSION_KEY = 'kasetlink.session'
+let memorySession: string | null = null
+
+/** Staff login token for this device (also sent as an httpOnly cookie by the backend). */
+export function getSession(): string | null {
+  try {
+    return window.localStorage.getItem(SESSION_KEY) ?? memorySession
+  } catch {
+    return memorySession
+  }
+}
+
+export function setSession(token: string): void {
+  memorySession = token
+  try {
+    window.localStorage.setItem(SESSION_KEY, token)
+  } catch {
+    // Storage blocked: the session lasts until the page is closed.
+  }
+}
+
+export function clearSession(): void {
+  memorySession = null
+  try {
+    window.localStorage.removeItem(SESSION_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+let sessionListener: (() => void) | null = null
+
+/** The login gate registers this to show the login screen when the session ends. */
+export function onSessionEnded(listener: (() => void) | null): void {
+  sessionListener = listener
+}
+
 type AuthListener = (err: AuthTokenExpiredError) => void
 let authListener: AuthListener | null = null
 
@@ -155,6 +194,8 @@ async function requestOnce(path: string, method: string, body: unknown): Promise
   const headers: Record<string, string> = { Accept: 'application/json' }
   const token = getFeatureToken()
   if (token) headers['x-app-feature-token'] = token
+  const session = getSession()
+  if (session) headers['x-kl-session'] = session
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   try {
     return await fetch(`/api${path}`, {
@@ -218,7 +259,13 @@ export async function apiFetch<T>(path: string, options: { method?: string; body
       throw new ApiFailure(401, authErr.message, 'auth_expired')
     }
     const { message, code } = readErrorBody(parsed)
-    if (res.status === 401) authListener?.(new AuthTokenExpiredError('expired'))
+    if (code === 'app_login_required') {
+      // The shop staff session ended (expired, signed out elsewhere, role changed).
+      clearSession()
+      sessionListener?.()
+    } else if (res.status === 401 && code !== 'login_failed') {
+      authListener?.(new AuthTokenExpiredError('expired'))
+    }
     throw new ApiFailure(res.status, message, code)
   }
   return parsed as T

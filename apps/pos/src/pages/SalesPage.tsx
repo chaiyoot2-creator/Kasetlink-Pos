@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Ban, Loader2, Printer, Search } from 'lucide-react'
+import { Ban, FileText, Loader2, Printer, Search } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -8,14 +8,19 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { Empty, ErrorBox, Loading, PageHeader, TableWrap } from '@/components/common'
-import { Receipt } from '@/components/Receipt'
+import { CreateDeliveryButton } from '@/components/CreateDeliveryButton'
+import { Receipt, ReceiptImageToggle, ReceiptPrint } from '@/components/Receipt'
+import { TaxInvoicePrint } from '@/components/TaxInvoice'
 import { apiFetch, errorMessage } from '@/lib/api'
 import { PAYMENT_LABEL, baht, dateTime, todayISO } from '@/lib/format'
+import { printSoon } from '@/lib/print'
 import { newEvent } from '@/lib/terminal'
 import type { SaleDetail, SaleHeader } from '@/lib/types'
+import { useAuth } from '@/lib/auth'
 import { useApi, useDebounced } from '@/lib/use-api'
 
 export function SalesPage() {
+  const showCost = useAuth().can('view.cost')
   const [from, setFrom] = useState(todayISO())
   const [to, setTo] = useState(todayISO())
   const [q, setQ] = useState('')
@@ -57,7 +62,7 @@ export function SalesPage() {
                 <TableHead className="hidden md:table-cell">ลูกค้า</TableHead>
                 <TableHead>ชำระ</TableHead>
                 <TableHead className="text-right">ยอดสุทธิ</TableHead>
-                <TableHead className="hidden text-right sm:table-cell">กำไร</TableHead>
+                {showCost ? <TableHead className="hidden text-right sm:table-cell">กำไร</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -66,12 +71,17 @@ export function SalesPage() {
                   <TableCell className="font-medium">
                     {s.billNo}
                     {s.status === 'voided' ? <Badge variant="destructive" className="ml-2">ยกเลิก</Badge> : null}
+                    {s.taxInvoiceNo ? (
+                      <Badge variant="outline" className="ml-2 font-normal">
+                        {s.taxInvoiceNo}
+                      </Badge>
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{dateTime(s.soldAt)}</TableCell>
                   <TableCell className="hidden md:table-cell">{s.customerName ?? '-'}</TableCell>
                   <TableCell>{PAYMENT_LABEL[s.paymentMethod]}</TableCell>
                   <TableCell className={`tabular text-right ${s.status === 'voided' ? 'text-muted-foreground line-through' : ''}`}>{baht(s.total)}</TableCell>
-                  <TableCell className="tabular hidden text-right sm:table-cell">{s.status === 'voided' ? '-' : baht(s.profit)}</TableCell>
+                  {showCost ? <TableCell className="tabular hidden text-right sm:table-cell">{s.status === 'voided' ? '-' : baht(s.profit)}</TableCell> : null}
                 </TableRow>
               ))}
             </TableBody>
@@ -84,12 +94,40 @@ export function SalesPage() {
   )
 }
 
-function SaleDialog({ id, onClose, onChanged }: { id: string | null; onClose: () => void; onChanged: () => void }) {
+export function SaleDialog({ id, onClose, onChanged }: { id: string | null; onClose: () => void; onChanged: () => void }) {
   const detail = useApi<SaleDetail>(id ? `/sales/${id}` : null)
+  const { can } = useAuth()
   const [voiding, setVoiding] = useState(false)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
+  // Which document the print portal holds: the slip receipt or the A4 tax invoice.
+  const [printMode, setPrintMode] = useState<'receipt' | 'invoice'>('receipt')
+  const [receiptImages, setReceiptImages] = useState(false)
+  useEffect(() => setReceiptImages(false), [id])
   const sale = id && detail.data?.id === id ? detail.data : null
+
+  useEffect(() => {
+    if (printMode !== 'invoice') return
+    printSoon()
+    const done = () => setPrintMode('receipt')
+    window.addEventListener('afterprint', done)
+    return () => window.removeEventListener('afterprint', done)
+  }, [printMode])
+
+  const issueInvoice = async () => {
+    if (!sale) return
+    setBusy(true)
+    try {
+      const res = await apiFetch<{ taxInvoiceNo: string | null }>(`/sales/${sale.id}/tax-invoice`, { method: 'POST', body: newEvent() })
+      toast.success(`ออกใบเสร็จเต็มรูป ${res.taxInvoiceNo ?? ''} แล้ว`)
+      onChanged()
+      void detail.reload()
+    } catch (err) {
+      toast.error(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const doVoid = async () => {
     if (!sale) return
@@ -114,12 +152,26 @@ function SaleDialog({ id, onClose, onChanged }: { id: string | null; onClose: ()
         <DialogHeader>
           <DialogTitle>{sale?.billNo ?? 'บิลขาย'}</DialogTitle>
           <DialogDescription>
-            {sale ? `ต้นทุน ${baht(sale.costTotal)} · กำไร ${baht(sale.profit)} บาท` : ' '}
+            {sale && can('view.cost') ? `ต้นทุน ${baht(sale.costTotal)} · กำไร ${baht(sale.profit)} บาท` : ' '}
           </DialogDescription>
         </DialogHeader>
         {detail.error ? <ErrorBox message={detail.error} /> : null}
         {!sale && !detail.error ? <Loading /> : null}
-        {sale ? <Receipt sale={sale} /> : null}
+        {sale ? (
+          <>
+            {sale.status === 'completed' ? <CreateDeliveryButton key={sale.id} saleId={sale.id} hasCustomer={sale.customerId !== null} /> : null}
+            <ReceiptImageToggle sale={sale} checked={receiptImages} onChange={setReceiptImages} />
+            <Receipt sale={sale} showImages={receiptImages} />
+            {printMode === 'invoice' ? <TaxInvoicePrint sales={[sale]} /> : <ReceiptPrint sale={sale} showImages={receiptImages} />}
+          </>
+        ) : null}
+        {sale?.taxInvoiceNo ? (
+          <p className="rounded-md bg-muted p-2 text-sm">
+            ใบเสร็จเต็มรูป <span className="font-semibold">{sale.taxInvoiceNo}</span>
+            {sale.buyer ? ` · ${sale.buyer.name}` : ''}
+            {sale.accountingSentAt ? ` · ส่งบัญชีแล้ว ${dateTime(sale.accountingSentAt)}` : ' · ยังไม่ได้ส่งบัญชี'}
+          </p>
+        ) : null}
         {sale?.status === 'voided' ? (
           <p className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">ยกเลิกแล้ว: {sale.voidReason}</p>
         ) : null}
@@ -133,7 +185,7 @@ function SaleDialog({ id, onClose, onChanged }: { id: string | null; onClose: ()
           </div>
         ) : null}
         <DialogFooter>
-          {sale?.status === 'completed' && !voiding ? (
+          {sale?.status === 'completed' && !voiding && can('sales.void') ? (
             <Button variant="outline" className="cursor-pointer text-destructive" onClick={() => setVoiding(true)}>
               <Ban /> ยกเลิกบิล
             </Button>
@@ -143,9 +195,20 @@ function SaleDialog({ id, onClose, onChanged }: { id: string | null; onClose: ()
               {busy ? <Loader2 className="animate-spin" /> : <Ban />} ยืนยันยกเลิกบิล
             </Button>
           ) : (
-            <Button className="cursor-pointer" onClick={() => window.print()} disabled={!sale}>
-              <Printer /> พิมพ์ซ้ำ
-            </Button>
+            <>
+              {sale?.taxInvoiceNo ? (
+                <Button variant="outline" className="cursor-pointer" onClick={() => setPrintMode('invoice')}>
+                  <FileText /> พิมพ์ใบเสร็จเต็มรูป
+                </Button>
+              ) : sale?.status === 'completed' && sale.customerId ? (
+                <Button variant="outline" className="cursor-pointer" disabled={busy} onClick={() => void issueInvoice()}>
+                  {busy ? <Loader2 className="animate-spin" /> : <FileText />} ออกใบเสร็จเต็มรูป
+                </Button>
+              ) : null}
+              <Button className="cursor-pointer" onClick={() => window.print()} disabled={!sale || printMode !== 'receipt'}>
+                <Printer /> พิมพ์ซ้ำ
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>

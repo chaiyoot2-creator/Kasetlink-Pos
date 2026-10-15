@@ -1,8 +1,10 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react'
-import { BellRing, Boxes, ChartLine, Database, Menu, ReceiptText, Settings, ShoppingCart, Sprout, Truck } from 'lucide-react'
+import { BellRing, Boxes, ChartLine, Database, FileSignature, FileText, HandCoins, Handshake, KeyRound, LogOut, MapPinned, Menu, ReceiptText, Settings, ShoppingCart, Sprout, Truck, UserCog, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useApp } from '@/lib/app-context'
+import { useAuth, type Permission } from '@/lib/auth'
+import { ChangePasswordDialog } from '@/components/ChangePasswordDialog'
 import { apiFetch } from '@/lib/api'
 import type { Alerts } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -11,17 +13,26 @@ export interface NavItem {
   route: string
   label: string
   icon: ComponentType<{ className?: string }>
+  /** Any one of these lets the user open the page. */
+  perms: Permission[]
 }
 
 export const NAV: NavItem[] = [
-  { route: 'pos', label: 'ขายสินค้า', icon: ShoppingCart },
-  { route: 'sales', label: 'บิลขาย', icon: ReceiptText },
-  { route: 'purchasing', label: 'รับเข้าสินค้า', icon: Truck },
-  { route: 'stock', label: 'สต็อก', icon: Boxes },
-  { route: 'alerts', label: 'แจ้งเตือน', icon: BellRing },
-  { route: 'reports', label: 'กำไรขาดทุน', icon: ChartLine },
-  { route: 'master', label: 'ข้อมูลหลัก', icon: Database },
-  { route: 'settings', label: 'ตั้งค่า', icon: Settings },
+  { route: 'pos', label: 'ขายสินค้า', icon: ShoppingCart, perms: ['pos.sell'] },
+  { route: 'quotations', label: 'ใบเสนอราคา', icon: FileSignature, perms: ['quotations'] },
+  { route: 'sales', label: 'บิลขาย', icon: ReceiptText, perms: ['sales.view', 'pos.sell'] },
+  { route: 'receivables', label: 'ลูกหนี้', icon: HandCoins, perms: ['receivables'] },
+  { route: 'customers', label: 'ลูกค้า', icon: Users, perms: ['customers.insight'] },
+  { route: 'agency', label: 'ฟาร์มสุข', icon: Handshake, perms: ['agency'] },
+  { route: 'delivery', label: 'จัดส่ง', icon: MapPinned, perms: ['delivery'] },
+  { route: 'purchasing', label: 'รับเข้าสินค้า', icon: Truck, perms: ['purchasing'] },
+  { route: 'stock', label: 'สต็อก', icon: Boxes, perms: ['stock'] },
+  { route: 'alerts', label: 'แจ้งเตือน', icon: BellRing, perms: ['alerts'] },
+  { route: 'reports', label: 'กำไรขาดทุน', icon: ChartLine, perms: ['reports'] },
+  { route: 'accounting', label: 'ส่งบัญชี', icon: FileText, perms: ['accounting'] },
+  { route: 'master', label: 'ข้อมูลหลัก', icon: Database, perms: ['master'] },
+  { route: 'settings', label: 'ตั้งค่า', icon: Settings, perms: ['settings'] },
+  { route: 'users', label: 'ผู้ใช้และสิทธิ์', icon: UserCog, perms: ['users.manage'] },
 ]
 
 const MOBILE_PRIMARY = ['pos', 'sales', 'stock', 'alerts']
@@ -33,7 +44,7 @@ function useAlertCount(): number {
     let alive = true
     const load = () =>
       apiFetch<Alerts>('/alerts')
-        .then((a) => alive && setCount(a.lowStock.length + a.nearExpiry.length + a.expired.length))
+        .then((a) => alive && setCount(a.lowStock.length + a.nearExpiry.length + a.expired.length + a.receivables.overdueCount))
         .catch(() => undefined)
     void load()
     const t = window.setInterval(load, 5 * 60_000)
@@ -49,6 +60,26 @@ export function AppShell({ route, go, children }: { route: string; go: (r: strin
   const app = useApp()
   const alertCount = useAlertCount()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const auth = useAuth()
+  const nav = NAV.filter((n) => auth.can(...n.perms))
+  const mobilePrimary = nav.filter((n) => MOBILE_PRIMARY.includes(n.route)).slice(0, 4)
+  const userBox = (
+    <div className="grid gap-1">
+      <p className="truncate text-sm font-medium text-foreground">{auth.user.displayName}</p>
+      <p className="truncate text-xs text-muted-foreground">
+        {auth.user.roleName} · {auth.user.username}
+      </p>
+      <div className="flex flex-wrap gap-1">
+        <button type="button" onClick={() => setChangingPassword(true)} className="flex cursor-pointer items-center gap-1 rounded px-1 py-0.5 text-xs hover:bg-muted">
+          <KeyRound className="size-3" /> เปลี่ยนรหัส
+        </button>
+        <button type="button" onClick={auth.logout} className="flex cursor-pointer items-center gap-1 rounded px-1 py-0.5 text-xs text-destructive hover:bg-muted">
+          <LogOut className="size-3" /> ออก / สลับผู้ใช้
+        </button>
+      </div>
+    </div>
+  )
   const isPos = route === 'pos'
 
   const badge = (r: string) =>
@@ -72,7 +103,7 @@ export function AppShell({ route, go, children }: { route: string; go: (r: strin
           </div>
         </div>
         <ul className="flex-1 space-y-1 overflow-y-auto px-2">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const Icon = item.icon
             const active = route === item.route
             return (
@@ -93,8 +124,15 @@ export function AppShell({ route, go, children }: { route: string; go: (r: strin
             )
           })}
         </ul>
+        <div className="border-t px-2 py-2 md:block lg:hidden">
+          <button type="button" onClick={auth.logout} title="ออกจากระบบ / สลับผู้ใช้" className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg py-2 text-[11px] text-muted-foreground hover:bg-muted">
+            <LogOut className="size-5" />
+            ออก
+          </button>
+        </div>
         <div className="hidden border-t px-4 py-3 text-xs text-muted-foreground lg:block">
-          <p className="truncate">เครื่อง: {app.terminalName}</p>
+          {userBox}
+          <p className="mt-2 truncate">เครื่อง: {app.terminalName}</p>
           <p className="truncate">โซน: {app.location?.name ?? '-'}</p>
           {app.data.stage === 'dev' ? <p className="mt-1 font-semibold text-amber-700">โหมดทดสอบ (ข้อมูล dev)</p> : null}
         </div>
@@ -118,8 +156,10 @@ export function AppShell({ route, go, children }: { route: string; go: (r: strin
       </div>
 
       {/* Phone bottom navigation */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-5 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
-        {NAV.filter((n) => MOBILE_PRIMARY.includes(n.route)).map((item) => {
+      <nav
+        style={{ gridTemplateColumns: `repeat(${mobilePrimary.length + 1}, minmax(0, 1fr))` }}
+        className="fixed inset-x-0 bottom-0 z-40 grid h-16 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
+        {mobilePrimary.map((item) => {
           const Icon = item.icon
           const active = route === item.route
           return (
@@ -140,7 +180,7 @@ export function AppShell({ route, go, children }: { route: string; go: (r: strin
           onClick={() => setMoreOpen(true)}
           className={cn(
             'flex cursor-pointer flex-col items-center justify-center gap-0.5 text-[11px]',
-            !MOBILE_PRIMARY.includes(route) ? 'font-semibold text-primary' : 'text-muted-foreground',
+            !mobilePrimary.some((n) => n.route === route) ? 'font-semibold text-primary' : 'text-muted-foreground',
           )}
         >
           <Menu className="size-5" /> เมนู
@@ -151,8 +191,9 @@ export function AppShell({ route, go, children }: { route: string; go: (r: strin
           <SheetHeader>
             <SheetTitle>เมนูทั้งหมด</SheetTitle>
           </SheetHeader>
+          <div className="mx-4 rounded-lg border p-3">{userBox}</div>
           <div className="grid grid-cols-3 gap-2 px-4 pb-4">
-            {NAV.map((item) => {
+            {nav.map((item) => {
               const Icon = item.icon
               return (
                 <button
@@ -175,6 +216,7 @@ export function AppShell({ route, go, children }: { route: string; go: (r: strin
           </div>
         </SheetContent>
       </Sheet>
+      <ChangePasswordDialog open={changingPassword} onClose={() => setChangingPassword(false)} />
     </div>
   )
 }

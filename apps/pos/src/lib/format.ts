@@ -67,12 +67,6 @@ export function parseNum(text: string): number {
   return Number(cleaned)
 }
 
-export const PRICE_TIER_LABEL: Record<string, string> = {
-  retail: 'ปลีก',
-  wholesale: 'ส่ง',
-  member: 'สมาชิก',
-}
-
 export const PAYMENT_LABEL: Record<string, string> = {
   cash: 'เงินสด',
   promptpay: 'พร้อมเพย์',
@@ -87,6 +81,9 @@ export const MOVEMENT_LABEL: Record<string, string> = {
   transfer_out: 'โอนออก',
   transfer_in: 'โอนเข้า',
   adjust: 'ปรับยอด',
+  agency_lend: 'ส่งลูกค้าฟาร์มสุขแทน (ยืม)',
+  agency_lend_void: 'ยกเลิกส่งฟาร์มสุข (คืนสต็อก)',
+  agency_return: 'ฟาร์มสุขส่งคืน',
 }
 
 export const ADJUST_REASON_LABEL: Record<string, string> = {

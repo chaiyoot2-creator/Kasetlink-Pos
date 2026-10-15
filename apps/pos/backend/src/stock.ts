@@ -118,9 +118,8 @@ export interface ProductInfo {
   avgCost: number
   isActive: boolean
   trackExpiry: boolean
-  priceRetail: number
-  priceWholesale: number
-  priceMember: number
+  /** Prices for levels 1..5 (0 = not set). */
+  priceLevels: number[]
 }
 
 export async function loadProducts(ctx: RequestCtx, ids: string[]): Promise<Map<string, ProductInfo>> {
@@ -128,7 +127,7 @@ export async function loadProducts(ctx: RequestCtx, ids: string[]): Promise<Map<
   if (unique.length === 0) return new Map()
   const rows = await query(
     ctx,
-    `SELECT id, name, unit, avg_cost, is_active, track_expiry, price_retail, price_wholesale, price_member
+    `SELECT id, name, unit, avg_cost, is_active, track_expiry, price_l1, price_l2, price_l3, price_l4, price_l5
        FROM products WHERE id IN (SELECT jsonb_array_elements_text($1::jsonb)::uuid)`,
     [JSON.stringify(unique)],
   )
@@ -141,9 +140,7 @@ export async function loadProducts(ctx: RequestCtx, ids: string[]): Promise<Map<
       avgCost: num(r, 'avg_cost'),
       isActive: bool(r, 'is_active'),
       trackExpiry: bool(r, 'track_expiry'),
-      priceRetail: num(r, 'price_retail'),
-      priceWholesale: num(r, 'price_wholesale'),
-      priceMember: num(r, 'price_member'),
+      priceLevels: [1, 2, 3, 4, 5].map((n) => num(r, `price_l${n}`)),
     })
   }
   for (const id of unique) {

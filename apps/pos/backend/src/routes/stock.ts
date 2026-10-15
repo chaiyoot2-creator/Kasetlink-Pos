@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import type { AppEnv } from '../app-env.js'
 import { HttpError } from '../errors.js'
+import { loadOpenBills, summarize } from '../receivables.js'
 import { query, transaction, type BatchOp, type Row } from '../gate.js'
 import {
   aggregateByLot,
@@ -187,7 +188,8 @@ stockRoutes.get('/alerts', async (c) => {
   const today = todayBangkok()
   const settings = await query(ctx, 'SELECT expiry_alert_days FROM shop_settings LIMIT 1')
   const days = settings[0] ? num(settings[0], 'expiry_alert_days') : 30
-  const [low, expiring] = await Promise.all([
+  const [receivables, low, expiring] = await Promise.all([
+    loadOpenBills(ctx),
     query(
       ctx,
       `SELECT p.id, p.sku, p.name, p.unit, p.reorder_point, COALESCE(s.qty, 0) AS qty
@@ -207,6 +209,7 @@ stockRoutes.get('/alerts', async (c) => {
   const lots = expiring.map(mapLot)
   return c.json({
     expiryAlertDays: days,
+    receivables: summarize(receivables),
     lowStock: low.map((r) => ({
       productId: str(r, 'id'),
       sku: str(r, 'sku'),

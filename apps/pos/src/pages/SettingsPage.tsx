@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Loader2, MonitorSmartphone, Plus, Store } from 'lucide-react'
+import { Loader2, MonitorSmartphone, Plus, Printer, Store } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,18 +10,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Field, LocationSelect, NumberInput, PageHeader } from '@/components/common'
+import { BackupSettings } from '@/components/BackupSettings'
+import { ReceiptPrint } from '@/components/Receipt'
 import { apiFetch, errorMessage } from '@/lib/api'
 import { useApp } from '@/lib/app-context'
 import { isValidPromptPayId } from '@/lib/promptpay'
-import type { Location, Settings } from '@/lib/types'
+import { PRICE_LEVELS } from '@/lib/pricing'
+import { PAPER_LABEL, getPrintPrefs, printSoon, savePrintPrefs, type PaperSize, type PrintPrefs } from '@/lib/print'
+import type { Location, SaleDetail, Settings } from '@/lib/types'
 
 export function SettingsPage() {
   return (
     <div className="grid max-w-3xl gap-4">
       <PageHeader title="ตั้งค่า" />
       <ThisTerminal />
+      <PrinterSettings />
       <ShopSettings />
       <Locations />
+      <BackupSettings />
     </div>
   )
 }
@@ -85,7 +91,8 @@ function ShopSettings() {
     try {
       await apiFetch('/settings', {
         method: 'PUT',
-        body: { ...f, promptpayId: f.promptpayId?.replace(/\D/g, '') || null },
+        // Animal feed is VAT exempt: the shop never splits VAT on its documents.
+        body: { ...f, vatRegistered: false, promptpayId: f.promptpayId?.replace(/\D/g, '') || null },
       })
       await app.reload()
       toast.success('บันทึกข้อมูลร้านแล้ว')
@@ -123,10 +130,28 @@ function ShopSettings() {
         <Field label="แจ้งเตือนใกล้หมดอายุล่วงหน้า (วัน)">
           <NumberInput value={f.expiryAlertDays} onChange={(v) => set('expiryAlertDays', Math.round(v ?? 0))} />
         </Field>
+        <div className="grid gap-2 rounded-lg border p-3 sm:col-span-2">
+          <p className="text-sm font-medium">ชื่อระดับราคา 5 ระดับ</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {PRICE_LEVELS.map((lvl) => (
+              <Field key={lvl} label={`ระดับ ${lvl}`}>
+                <Input
+                  value={f.priceLevelNames[lvl - 1] ?? ''}
+                  maxLength={30}
+                  onChange={(e) => set('priceLevelNames', f.priceLevelNames.map((n, i) => (i === lvl - 1 ? e.target.value : n)))}
+                />
+              </Field>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">ระดับ 1 คือราคาเริ่มต้นของลูกค้าทั่วไป และใช้แทนเมื่อสินค้าไม่มีราคาในระดับของลูกค้า</p>
+        </div>
+        <Field label="สาขาของร้าน" hint="00000 = สำนักงานใหญ่ · พิมพ์บนใบเสร็จเต็มรูป">
+          <Input value={f.branchCode} onChange={(e) => set('branchCode', e.target.value.replace(/\D/g, '').slice(0, 5))} inputMode="numeric" />
+        </Field>
         <Field label="ข้อความท้ายใบเสร็จ" className="sm:col-span-2">
           <Input value={f.receiptFooter ?? ''} onChange={(e) => set('receiptFooter', e.target.value)} placeholder="ขอบคุณที่ใช้บริการ" />
         </Field>
-        <Button className="cursor-pointer justify-self-start" onClick={() => void save()} disabled={busy || !f.shopName.trim() || ppInvalid}>
+        <Button className="cursor-pointer justify-self-start" onClick={() => void save()} disabled={busy || !f.shopName.trim() || ppInvalid || f.priceLevelNames.some((n) => !n.trim()) || !/^\d{5}$/.test(f.branchCode)}>
           {busy ? <Loader2 className="animate-spin" /> : null} บันทึกข้อมูลร้าน
         </Button>
       </CardContent>
@@ -222,6 +247,104 @@ function Locations() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </Card>
+  )
+}
+
+/** Sample bill for the test print. */
+function sampleSale(): SaleDetail {
+  return {
+    id: 'test',
+    billNo: 'TEST-0001',
+    eventId: 'test',
+    terminalId: 'ทดสอบ',
+    locationId: '',
+    locationName: 'ทดสอบเครื่องพิมพ์',
+    customerId: null,
+    customerName: null,
+    priceLevel: 1,
+    subtotal: 1040,
+    lineDiscountTotal: 0,
+    billDiscount: 20,
+    total: 1020,
+    costTotal: 0,
+    profit: 0,
+    paymentMethod: 'cash',
+    cashReceived: 1100,
+    changeAmount: 80,
+    status: 'completed',
+    voidReason: null,
+    note: null,
+    soldAt: new Date().toISOString(),
+    createdBy: null,
+    forAccounting: false,
+    taxInvoiceNo: null,
+    taxInvoiceAt: null,
+    vatRate: null,
+    vatAmount: null,
+    buyer: null,
+    accountingSentAt: null,
+    dueDate: null,
+    lines: [
+      { lineNo: 1, productId: 'a', productName: 'อาหารหมูขุน สูตร 1 (30 กก.)', unit: 'กระสอบ', qty: 1, unitPrice: 520, lineDiscount: 0, lineTotal: 520, billDiscountShare: 10, netAmount: 510, unitCost: 0, costTotal: 0, priceSource: 'level' },
+      { lineNo: 2, productId: 'b', productName: 'อาหารไก่ไข่ (30 กก.)', unit: 'กระสอบ', qty: 1, unitPrice: 520, lineDiscount: 0, lineTotal: 520, billDiscountShare: 10, netAmount: 510, unitCost: 0, costTotal: 0, priceSource: 'level' },
+    ],
+    lots: [],
+  }
+}
+
+function PrinterSettings() {
+  const [prefs, setPrefs] = useState<PrintPrefs>(getPrintPrefs)
+  const [testing, setTesting] = useState(false)
+
+  const update = (patch: Partial<PrintPrefs>) => {
+    const next = { ...prefs, ...patch }
+    setPrefs(next)
+    savePrintPrefs(next)
+  }
+
+  useEffect(() => {
+    if (!testing) return
+    printSoon()
+    const done = () => setTesting(false)
+    window.addEventListener('afterprint', done)
+    return () => window.removeEventListener('afterprint', done)
+  }, [testing])
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Printer className="size-5" /> เครื่องพิมพ์ใบเสร็จ (เครื่องนี้)
+        </CardTitle>
+        <CardDescription>
+          ตั้งค่าแยกแต่ละเครื่อง ใช้เครื่องพิมพ์ที่ติดตั้งในคอมพิวเตอร์/แท็บเล็ตนี้ เลือกเครื่องพิมพ์ได้ในหน้าต่างพิมพ์ของเบราว์เซอร์
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        <Field label="ขนาดกระดาษ">
+          <Select value={prefs.paper} onValueChange={(v) => update({ paper: v === '58' || v === 'a4' ? v : ('80' satisfies PaperSize) })}>
+            <SelectTrigger className="w-full cursor-pointer">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(['58', '80', 'a4'] as const).map((p) => (
+                <SelectItem key={p} value={p}>
+                  {PAPER_LABEL[p]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <label className="flex h-9 cursor-pointer items-center justify-between gap-3 rounded-md border px-3 text-sm">
+          พิมพ์อัตโนมัติหลังบันทึกบิล
+          <Switch checked={prefs.autoPrint} onCheckedChange={(v) => update({ autoPrint: v })} />
+        </label>
+        <Button variant="outline" className="cursor-pointer" onClick={() => setTesting(true)}>
+          <Printer /> ทดสอบพิมพ์
+        </Button>
+      </CardContent>
+      {testing ? <ReceiptPrint sale={sampleSale()} /> : null}
     </Card>
   )
 }

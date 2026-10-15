@@ -4,11 +4,14 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { ErrorBox, Loading } from '@/components/common'
-import { PRICE_TIER_LABEL, baht } from '@/lib/format'
+import { useApp } from '@/lib/app-context'
+import { baht } from '@/lib/format'
+import { levelName } from '@/lib/pricing'
 import type { Customer } from '@/lib/types'
 import { useApi, useDebounced } from '@/lib/use-api'
 
 export function CustomerPicker({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (c: Customer | null) => void }) {
+  const { data: app } = useApp()
   const [q, setQ] = useState('')
   const dq = useDebounced(q.trim())
   const { data, error, loading, reload } = useApi<Customer[]>(open ? `/customers?q=${encodeURIComponent(dq)}` : null)
@@ -57,7 +60,10 @@ export function CustomerPicker({ open, onClose, onPick }: { open: boolean; onClo
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <Badge variant="secondary">{PRICE_TIER_LABEL[c.customerType]}</Badge>
+                  <Badge variant="secondary">
+                    {levelName(app.settings.priceLevelNames, c.priceLevel)}
+                    {c.fixedPriceCount > 0 ? ` · ฟิกซ์ ${c.fixedPriceCount}` : ''}
+                  </Badge>
                   {c.balance > 0 ? <span className="tabular text-xs text-destructive">ค้าง {baht(c.balance)}</span> : null}
                 </div>
               </button>
