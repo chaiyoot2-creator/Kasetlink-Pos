@@ -12,6 +12,7 @@
   "dependencies": {
     "@fusebase/dashboard-service-sdk": "^v1.33.4-sdk.0",
     "@fusebase/fusebase-gate-sdk": "^2.13.1",
+    "@googlemaps/js-api-loader": "^2.1.3",
     "@zxing/browser": "^0.1.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
