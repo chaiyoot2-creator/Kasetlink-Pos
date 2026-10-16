@@ -1,4 +1,5 @@
-import { apiFetch } from './api'
+import { importLibrary, setOptions } from '@googlemaps/js-api-loader'
+import { apiFetch, errorMessage } from './api'
 
 export interface LatLng {
   lat: number
@@ -10,36 +11,86 @@ export interface MapsConfig {
   hasServerKey: boolean
 }
 
+/** Why the Google map could not be shown; the message is shown to staff as-is (Thai). */
+export type MapsLoadResult = { ok: true } | { ok: false; reason: 'config' | 'no-key' | 'load' | 'auth'; message: string }
+
 let configPromise: Promise<MapsConfig> | null = null
 
 /** Map settings from the backend (the browser key is restricted to the app's web address). */
 export function loadMapsConfig(): Promise<MapsConfig> {
-  configPromise ??= apiFetch<MapsConfig>('/maps/config').catch(() => ({ browserKey: null, hasServerKey: false }))
+  configPromise ??= apiFetch<MapsConfig>('/maps/config').catch((err: unknown) => {
+    configPromise = null // let the next attempt retry
+    throw err
+  })
   return configPromise
 }
 
-/** True once the Google Maps script has defined its classes. */
-function googleReady(): boolean {
-  return typeof google !== 'undefined' && typeof google.maps?.Map === 'function'
+declare global {
+  interface Window {
+    /** Called by the Maps JavaScript API when the key is invalid or not allowed for this site. */
+    gm_authFailure?: () => void
+  }
 }
 
-let googlePromise: Promise<boolean> | null = null
+const AUTH_MESSAGE =
+  'Google Maps ปฏิเสธคีย์ — ตรวจว่า GOOGLE_MAPS_BROWSER_KEY ถูกต้อง เปิดใช้ Maps JavaScript API แล้ว ผูกบัญชีชำระเงินแล้ว และอนุญาตที่อยู่เว็บของแอปนี้ (HTTP referrer)'
 
-/** Load the Google Maps JavaScript API once. Resolves false when it cannot be loaded. */
-export function loadGoogleMaps(key: string): Promise<boolean> {
-  if (googleReady()) return Promise.resolve(true)
-  googlePromise ??= new Promise<boolean>((resolve) => {
-    const cb = `__kasetGmaps${Date.now()}`
-    Object.assign(window, { [cb]: () => resolve(true) })
-    const s = document.createElement('script')
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&language=th&region=TH&loading=async&callback=${cb}`
-    s.async = true
-    s.onerror = () => resolve(false)
-    document.head.appendChild(s)
-    window.setTimeout(() => resolve(googleReady()), 15000)
-  })
+let authFailed = false
+const authListeners = new Set<() => void>()
+
+/** Subscribe to key/referrer rejections reported by Google after the script has loaded. */
+export function onMapsAuthFailure(cb: () => void): () => void {
+  if (authFailed) cb()
+  authListeners.add(cb)
+  return () => authListeners.delete(cb)
+}
+
+function installAuthHook() {
+  window.gm_authFailure = () => {
+    authFailed = true
+    console.error('[maps] Google Maps rejected the browser key (gm_authFailure). Check API + HTTP referrer restrictions.')
+    for (const cb of authListeners) cb()
+  }
+}
+
+let googlePromise: Promise<MapsLoadResult> | null = null
+
+/**
+ * Fetch the browser key from the backend and load the Maps JavaScript API once with the
+ * official loader. Resolves with a reason instead of throwing so the page can explain it.
+ */
+export function loadGoogleMaps(): Promise<MapsLoadResult> {
+  googlePromise ??= (async (): Promise<MapsLoadResult> => {
+    let cfg: MapsConfig
+    try {
+      cfg = await loadMapsConfig()
+    } catch (err) {
+      googlePromise = null
+      return { ok: false, reason: 'config', message: `โหลดการตั้งค่าแผนที่ไม่ได้: ${errorMessage(err)}` }
+    }
+    if (!cfg.browserKey) {
+      googlePromise = null
+      return {
+        ok: false,
+        reason: 'no-key',
+        message: 'ยังไม่ได้ตั้งค่า GOOGLE_MAPS_BROWSER_KEY ใน App Secrets ของ FuseBase (ตั้งค่าแล้วต้อง deploy ใหม่เพื่อให้มีผล)',
+      }
+    }
+    installAuthHook()
+    setOptions({ key: cfg.browserKey, v: 'weekly', language: 'th', region: 'TH' })
+    try {
+      await Promise.all([importLibrary('core'), importLibrary('maps'), importLibrary('marker')])
+    } catch (err) {
+      console.error('[maps] Google Maps JavaScript API failed to load', err instanceof Error ? err.message : err)
+      return { ok: false, reason: 'load', message: 'โหลด Google Maps ไม่สำเร็จ — ตรวจการเชื่อมต่ออินเทอร์เน็ต หรือส่วนขยายบล็อกโฆษณาในเบราว์เซอร์' }
+    }
+    if (authFailed) return { ok: false, reason: 'auth', message: AUTH_MESSAGE }
+    return { ok: true }
+  })()
   return googlePromise
 }
+
+export const MAPS_AUTH_MESSAGE = AUTH_MESSAGE
 
 /** Decode a Google encoded polyline into points. */
 export function decodePolyline(encoded: string): LatLng[] {

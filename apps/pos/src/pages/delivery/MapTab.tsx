@@ -38,7 +38,7 @@ export function MapTab({ places, onChanged }: { places: Place[]; onChanged: () =
     () =>
       pinned
         .filter((p) => !sel || p.id !== sel.id)
-        .map((p) => ({ id: `${p.kind}:${p.id}`, lat: p.lat ?? 0, lng: p.lng ?? 0, title: `${p.name} (${KIND_LABEL[p.kind]})`, color: PLACE_COLOR[p.kind], label: p.kind === 'location' ? '★' : '' })),
+        .map((p) => ({ id: `${p.kind}:${p.id}`, lat: p.lat ?? 0, lng: p.lng ?? 0, title: `${p.name} (${KIND_LABEL[p.kind]})`, info: [p.phone ? `โทร ${p.phone}` : '', p.address ?? '', p.note ?? ''], color: PLACE_COLOR[p.kind], label: p.kind === 'location' ? '★' : '' })),
     [pinned, sel],
   )
 
