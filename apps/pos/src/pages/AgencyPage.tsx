@@ -316,7 +316,9 @@ function DeliveryForm({ open, setup, onClose, onSaved }: { open: boolean; setup:
   const app = useApp()
   const [stockLocationId, setStockLocationId] = useState(app.locationId)
   const lending = lines.some((l) => l.fromStock)
-  const shopProducts = useApi<Product[]>(open && lending && stockLocationId ? `/products?limit=500&locationId=${stockLocationId}` : null)
+  // Shop products feed both the "send from shop stock" picker and the name suggestions.
+  const typing = lines.some((l) => !l.productId)
+  const shopProducts = useApi<Product[]>(open && (lending || typing) && stockLocationId ? `/products?limit=500&locationId=${stockLocationId}` : null)
 
   useEffect(() => {
     if (!open) return
@@ -344,13 +346,13 @@ function DeliveryForm({ open, setup, onClose, onSaved }: { open: boolean; setup:
    * Picking the shop product fills the line: a ฟาร์มสุข product already linked to it brings its
    * own company price (not the shop's selling price); otherwise an empty name takes the shop name.
    */
-  const pickShopProduct = (l: FormLine, id: string | null) => {
+  const pickShopProduct = (l: FormLine, id: string | null, useShopName = false) => {
     const linked = id && !l.productId ? products.find((p) => p.shopProductId === id) : undefined
     const shop = shopProducts.data?.find((p) => p.id === id)
     if (linked) {
-      setLine(l.key, { shopProductId: id, productId: linked.id, productName: linked.name, unit: linked.unit, stdPrice: linked.stdPrice })
-    } else if (!l.productId && shop && !l.productName.trim()) {
-      setLine(l.key, { shopProductId: id, productName: shop.name, unit: shop.unit })
+      setLine(l.key, { fromStock: true, shopProductId: id, productId: linked.id, productName: linked.name, unit: linked.unit, stdPrice: linked.stdPrice })
+    } else if (!l.productId && shop && (useShopName || !l.productName.trim())) {
+      setLine(l.key, { fromStock: true, shopProductId: id, productName: shop.name, unit: shop.unit })
     } else {
       setLine(l.key, { shopProductId: id })
     }
@@ -519,7 +521,12 @@ function DeliveryForm({ open, setup, onClose, onSaved }: { open: boolean; setup:
                   </SelectContent>
                 </Select>
                 {!l.productId ? (
-                  <Input value={l.productName} onChange={(e) => setLine(l.key, { productName: e.target.value })} placeholder="ชื่อสินค้า" />
+                  <NameSuggest
+                    value={l.productName}
+                    shopProducts={shopProducts.data}
+                    onChange={(v) => setLine(l.key, { productName: v })}
+                    onPick={(id) => pickShopProduct(l, id, true)}
+                  />
                 ) : null}
               </Field>
               <Field label={`จำนวน (${l.unit === 'กระสอบ' ? 'กส.' : l.unit})`}>
@@ -1404,6 +1411,61 @@ function SetupDialog({ target, setup, onClose, onSaved }: { target: EditTarget |
 }
 
 // ---------------------------------------------------------------- stock lent to ฟาร์มสุข
+
+/** Name box that suggests shop products while typing; picking one sends it from shop stock. */
+function NameSuggest({
+  value,
+  shopProducts,
+  onChange,
+  onPick,
+}: {
+  value: string
+  shopProducts: Product[] | null
+  onChange: (v: string) => void
+  onPick: (shopProductId: string) => void
+}) {
+  const [focused, setFocused] = useState(false)
+  const q = value.trim().toLowerCase()
+  const matches =
+    focused && q && shopProducts
+      ? shopProducts.filter((p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || (p.barcode ?? '').includes(q)).slice(0, 8)
+      : []
+  const exact = matches.length === 1 && matches[0]?.name === value
+  return (
+    <div className="relative">
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="พิมพ์ชื่อหรือรหัสสินค้าในร้าน"
+      />
+      {matches.length > 0 && !exact ? (
+        <ul className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-md border bg-popover p-1 text-sm shadow-md">
+          {matches.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center justify-between gap-2 rounded px-2 py-1.5 text-left hover:bg-accent"
+                // Pick on pointer down (mouse and touch) so the input's blur does not close the list first.
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  onPick(p.id)
+                  setFocused(false)
+                }}
+              >
+                <span className="min-w-0 truncate">{p.name}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {p.sku} · คงเหลือ {qty(p.qtyHere)}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  )
+}
 
 /** Shop price next to the company price, so staff do not type the shop's own price by mistake. */
 function ShopPriceNote({ shop, line, onRemember }: { shop: Product | undefined; line: FormLine; onRemember: (v: boolean) => void }) {
