@@ -17,6 +17,7 @@ import { useApp } from '@/lib/app-context'
 import { baht, qty as fmtQty, round2, round3 } from '@/lib/format'
 import { PRICE_LEVELS, levelName, resolvePrice, type PriceSource } from '@/lib/pricing'
 import { getPrintPrefs, printSoon } from '@/lib/print'
+import { trackSale } from '@/lib/analytics'
 import { newEvent } from '@/lib/terminal'
 import type { Customer, CustomerPrice, Ledger, PaymentMethod, Product, SaleDetail, SaleResult } from '@/lib/types'
 import { useApi, useDebounced } from '@/lib/use-api'
@@ -82,6 +83,16 @@ export function PosPage() {
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
   }, [])
+
+  // Usage analytics: a sale starts when the first item lands in an empty cart (one event per sale).
+  const startedSale = useRef(false)
+  useEffect(() => {
+    if (lines.length === 0) startedSale.current = false
+    else if (!startedSale.current) {
+      startedSale.current = true
+      trackSale('sale_started', crypto.randomUUID())
+    }
+  }, [lines.length])
 
   // Any change to the cart invalidates the pending checkout event.
   useEffect(() => {
@@ -219,6 +230,7 @@ export function PosPage() {
           quotationId: quotation?.id ?? null,
         },
       })
+      trackSale('sale_completed', crypto.randomUUID())
       setPayOpen(false)
       setCartOpen(false)
       toast.success(

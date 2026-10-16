@@ -4,7 +4,9 @@ import { AuthTokenExpiredError, getFeatureToken, onAuthExpired } from './lib/api
 import { MAGIC_LINK_ROUTE, buildLegacyMagicLinkRedirect } from './lib/magic-link'
 import { AuthExpiredModal } from './components/AuthExpiredModal'
 import { EnvPanel } from './components/EnvPanel'
-import { AppShell, NAV } from './components/AppShell'
+import { AppShell, NAV, canOpen } from './components/AppShell'
+import { startAnalytics, trackAppOpened, trackPage } from './lib/analytics'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 import { AuthGate, useAuth } from './lib/auth'
 import { UsersPage } from './pages/UsersPage'
 import { QuotationsPage } from './pages/QuotationsPage'
@@ -29,6 +31,10 @@ import { SettingsPage } from './pages/SettingsPage'
 import { FirstRunSetup } from './pages/FirstRunSetup'
 
 function App() {
+  useEffect(() => {
+    startAnalytics()
+    trackAppOpened()
+  }, [])
   if (typeof window !== 'undefined' && window.location.pathname === MAGIC_LINK_ROUTE) {
     return <LegacyMagicLinkRedirect />
   }
@@ -128,17 +134,22 @@ function AppContent() {
 
 function Routed() {
   const { data } = useApp()
-  const { can } = useAuth()
+  const auth = useAuth()
+  const { can } = auth
   const [route, go] = useHashRoute('pos')
-  const allowed = NAV.filter((n) => can(...n.perms))
+  const allowed = NAV.filter((n) => canOpen(n, auth))
   const current = NAV.find((n) => n.route === route)
+  const shown = data.locations.length > 0 && current !== undefined && canOpen(current, auth)
   // Pages this account may not open fall back to the first one it may.
   useEffect(() => {
-    if ((!current || !can(...current.perms)) && allowed[0] && allowed[0].route !== route) go(allowed[0].route)
+    if ((!current || !canOpen(current, auth)) && allowed[0] && allowed[0].route !== route) go(allowed[0].route)
   }, [route])
+  useEffect(() => {
+    if (shown) trackPage(route)
+  }, [route, shown])
   if (data.locations.length === 0) return can('settings') ? <FirstRunSetup /> : <Splash error="ร้านยังไม่ได้ตั้งค่าสาขา — ให้เจ้าของร้านเข้าสู่ระบบเพื่อตั้งค่าก่อน" retry={() => window.location.reload()} />
   if (allowed.length === 0) return <Splash error="บัญชีนี้ยังไม่มีสิทธิ์ใช้งานเมนูใด — ติดต่อเจ้าของร้าน" retry={() => window.location.reload()} />
-  if (!current || !can(...current.perms)) return null
+  if (!current || !canOpen(current, auth)) return null
   return (
     <AppShell route={route} go={go}>
       {route === 'pos' && <PosPage />}
@@ -157,6 +168,7 @@ function Routed() {
       {route === 'users' && <UsersPage />}
       {route === 'quotations' && <QuotationsPage />}
       {route === 'vision' && <VisionPage />}
+      {route === 'analytics' && <AnalyticsPage />}
     </AppShell>
   )
 }

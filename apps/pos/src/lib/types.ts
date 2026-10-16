@@ -434,3 +434,27 @@ export interface Ledger {
   summary: { outstanding: number; overdue: number; unappliedCredit: number }
   entries: LedgerEntry[]
 }
+
+// ---------------------------------------------------------------- usage analytics
+
+export interface UsageSummary {
+  from: string
+  to: string
+  timeZone: string
+  lastEventAt: string | null
+  totals: {
+    visits: number
+    uniqueUsers: number
+    signedInUsers: number
+    anonymousBrowsers: number
+    fusebaseUsers: number
+    sessions: number
+    avgSessionSeconds: number
+    pageViews: number
+    posOpened: number
+    salesStarted: number
+    salesCompleted: number
+  }
+  pages: { page: string; views: number }[]
+  days: { day: string; visits: number; sessions: number; users: number; pageViews: number; salesStarted: number; salesCompleted: number }[]
+}

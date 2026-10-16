@@ -40,6 +40,8 @@
     "quotations": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
     "quotation_lines": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
     "backup_config": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
-    "stock_documents": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" }
+    "stock_documents": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "usage_events": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "usage_sessions": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" }
   }
 }

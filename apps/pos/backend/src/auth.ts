@@ -59,6 +59,8 @@ export interface AppUser {
   displayName: string
   roleId: string
   roleName: string
+  /** Built-in role this account's role came from (`owner`, `manager`, …); null for custom roles. */
+  roleKey: string | null
   isOwner: boolean
   permissions: Permission[]
   sessionVersion: number
@@ -138,7 +140,7 @@ async function readToken(ctx: RequestCtx, token: string): Promise<{ userId: stri
 // ---------------------------------------------------------------- users
 
 const USER_SELECT = `
-  SELECT u.*, r.name AS role_name, r.is_owner, to_json(r.permissions)::text AS permissions_json
+  SELECT u.*, r.name AS role_name, r.role_key, r.is_owner, to_json(r.permissions)::text AS permissions_json
     FROM app_users u JOIN app_roles r ON r.id = u.role_id`
 
 export function mapAppUser(r: Row): AppUser & { isActive: boolean; lastLoginAt: string | null; lockedUntil: string | null } {
@@ -156,6 +158,7 @@ export function mapAppUser(r: Row): AppUser & { isActive: boolean; lastLoginAt: 
     displayName: str(r, 'display_name'),
     roleId: str(r, 'role_id'),
     roleName: str(r, 'role_name'),
+    roleKey: strOrNull(r, 'role_key'),
     isOwner,
     permissions: isOwner ? [...PERMISSIONS, 'users.manage'] : perms.filter((p) => p !== 'users.manage'),
     sessionVersion: num(r, 'session_version'),
@@ -255,6 +258,11 @@ export function requiredPermissions(method: string, path: string): Permission[] 
     if ((m === '*' || m === method) && re.test(path)) return perms
   }
   return null
+}
+
+/** Usage analytics: the owner role and the built-in manager role only. */
+export function canViewAnalytics(user: AppUser): boolean {
+  return user.isOwner || user.roleKey === 'manager'
 }
 
 export function hasAny(user: AppUser, perms: Permission[]): boolean {

@@ -1,5 +1,5 @@
 {
-  "bundleVersion": 14,
+  "bundleVersion": 15,
   "alias": "kasetlink-pos",
   "engine": "postgres",
   "storeType": "sql",
@@ -87,6 +87,12 @@
       "name": "quotations",
       "file": "0014_quotations.sql",
       "checksum": "5570a4d1b872f820780743f6999a9e95e852aa2695647aec28b1e9f5cb340938"
+    },
+    {
+      "version": 15,
+      "name": "usage_analytics",
+      "file": "0015_usage_analytics.sql",
+      "checksum": "bcbe27feb1649c8b93f43b2c3430fe0a9e72afe0951c76305ca9a1a73994db66"
     }
   ]
 }

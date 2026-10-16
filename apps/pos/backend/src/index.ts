@@ -6,6 +6,7 @@ import { HttpError, handleError } from './errors.js'
 import { authRoutes } from './routes/auth.js'
 import { buildRequestCtx, buildSystemCtx, resolveStage } from './gate.js'
 import { accountingRoutes } from './routes/accounting.js'
+import { analyticsRoutes } from './routes/analytics.js'
 import { agencyRoutes } from './routes/agency.js'
 import { backupRoutes } from './routes/backup.js'
 import { imageRoutes } from './routes/images.js'
@@ -33,8 +34,11 @@ app.use('*', async (c, next) => {
   await next()
 })
 
-/** Reachable before signing in (change-password checks the session itself). */
-const PUBLIC_PATHS = new Set(['/health', '/auth/status', '/auth/setup', '/auth/login', '/auth/logout', '/auth/change-password'])
+/**
+ * Reachable before signing in (change-password checks the session itself; usage events
+ * attach the staff account only when the request's own session proves it).
+ */
+const PUBLIC_PATHS = new Set(['/health', '/auth/status', '/auth/setup', '/auth/login', '/auth/logout', '/auth/change-password', '/analytics/events'])
 
 // Then the shop staff login: every route except login itself needs a signed-in user with
 // the permission the path requires (see RULES in auth.ts).
@@ -65,6 +69,7 @@ app.route('/', imageRoutes)
 app.route('/', agencyRoutes)
 app.route('/', deliveryRoutes)
 app.route('/', quotationRoutes)
+app.route('/', analyticsRoutes)
 
 const port = Number(process.env.BACKEND_PORT) || 3001
 
