@@ -10,7 +10,8 @@
       "model": "claude-opus-5-5",
       "access": [
         {
-          "type": "visitor"
+          "type": "visitor",
+          "id": "0"
         },
         {
           "type": "orgRole",
