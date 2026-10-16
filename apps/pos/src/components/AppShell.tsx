@@ -1,5 +1,5 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react'
-import { BellRing, Boxes, ChartLine, Database, FileSignature, FileText, HandCoins, Handshake, KeyRound, LogOut, MapPinned, Menu, ReceiptText, Settings, ShoppingCart, Sprout, Truck, UserCog, Users } from 'lucide-react'
+import { BellRing, Boxes, ChartLine, Database, FileSignature, FileText, HandCoins, Handshake, KeyRound, LogOut, MapPinned, Menu, ReceiptText, ScanEye, Settings, ShoppingCart, Sprout, Truck, UserCog, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useApp } from '@/lib/app-context'
@@ -15,6 +15,8 @@ export interface NavItem {
   icon: ComponentType<{ className?: string }>
   /** Any one of these lets the user open the page. */
   perms: Permission[]
+  /** Not built yet: shown with a "เร็วๆ นี้" tag. */
+  soon?: boolean
 }
 
 export const NAV: NavItem[] = [
@@ -33,6 +35,7 @@ export const NAV: NavItem[] = [
   { route: 'master', label: 'ข้อมูลหลัก', icon: Database, perms: ['master'] },
   { route: 'settings', label: 'ตั้งค่า', icon: Settings, perms: ['settings'] },
   { route: 'users', label: 'ผู้ใช้และสิทธิ์', icon: UserCog, perms: ['users.manage'] },
+  { route: 'vision', label: 'AI Vision', icon: ScanEye, perms: ['pos.sell', 'stock'], soon: true },
 ]
 
 const MOBILE_PRIMARY = ['pos', 'sales', 'stock', 'alerts']
@@ -86,6 +89,10 @@ export function AppShell({ route, go, children }: { route: string; go: (r: strin
     r === 'alerts' && alertCount > 0 ? (
       <Badge variant="destructive" className="h-5 min-w-5 rounded-full px-1 text-[10px]">
         {alertCount > 99 ? '99+' : alertCount}
+      </Badge>
+    ) : NAV.find((n) => n.route === r)?.soon ? (
+      <Badge variant="secondary" className="h-5 rounded-full px-1.5 text-[10px] font-normal whitespace-nowrap">
+        เร็วๆ นี้
       </Badge>
     ) : null
 
@@ -210,6 +217,7 @@ export function AppShell({ route, go, children }: { route: string; go: (r: strin
                 >
                   <Icon className="size-5" />
                   {item.label}
+                  {item.soon ? <span className="text-[10px] text-muted-foreground">เร็วๆ นี้</span> : null}
                 </button>
               )
             })}

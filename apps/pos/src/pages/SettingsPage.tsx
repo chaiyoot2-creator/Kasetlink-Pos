@@ -91,8 +91,7 @@ function ShopSettings() {
     try {
       await apiFetch('/settings', {
         method: 'PUT',
-        // Animal feed is VAT exempt: the shop never splits VAT on its documents.
-        body: { ...f, vatRegistered: false, promptpayId: f.promptpayId?.replace(/\D/g, '') || null },
+        body: { ...f, promptpayId: f.promptpayId?.replace(/\D/g, '') || null },
       })
       await app.reload()
       toast.success('บันทึกข้อมูลร้านแล้ว')
@@ -280,8 +279,6 @@ function sampleSale(): SaleDetail {
     forAccounting: false,
     taxInvoiceNo: null,
     taxInvoiceAt: null,
-    vatRate: null,
-    vatAmount: null,
     buyer: null,
     accountingSentAt: null,
     dueDate: null,

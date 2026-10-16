@@ -12,10 +12,10 @@
   "dependencies": {
     "@fusebase/dashboard-service-sdk": "^v1.33.4-sdk.0",
     "@fusebase/fusebase-gate-sdk": "^2.13.1",
+    "@googlemaps/js-api-loader": "^2.1.3",
     "@zxing/browser": "^0.1.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "leaflet": "^1.9.4",
     "lucide-react": "^0.513.0",
     "qrcode": "^1.5.4",
     "radix-ui": "^1.8.1",
@@ -28,7 +28,6 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.x",
     "@types/google.maps": "^3.58.1",
-    "@types/leaflet": "^1.9.12",
     "@types/node": "^22.x",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.5",

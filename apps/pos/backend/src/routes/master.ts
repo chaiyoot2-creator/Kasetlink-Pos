@@ -37,8 +37,6 @@ function mapSettings(r: Row | undefined) {
     promptpayId: r ? strOrNull(r, 'promptpay_id') : null,
     receiptFooter: r ? strOrNull(r, 'receipt_footer') : null,
     expiryAlertDays: r ? num(r, 'expiry_alert_days') : 30,
-    vatRegistered: r ? bool(r, 'vat_registered') : false,
-    vatRate: r ? num(r, 'vat_rate') : 7,
     branchCode: r ? str(r, 'branch_code') || '00000' : '00000',
   }
 }
@@ -87,8 +85,6 @@ const settingsSchema = z.object({
   receiptFooter: z.string().trim().max(400).nullish(),
   expiryAlertDays: z.number().int().min(0).max(365),
   priceLevelNames: z.array(z.string().trim().min(1).max(30)).length(5).default(DEFAULT_LEVEL_NAMES),
-  vatRegistered: z.boolean().default(false),
-  vatRate: z.number().min(0).max(30).default(7),
   branchCode: z.string().trim().regex(/^\d{5}$/, 'รหัสสาขาต้องเป็นตัวเลข 5 หลัก (สำนักงานใหญ่ = 00000)').default('00000'),
 })
 
@@ -98,14 +94,13 @@ masterRoutes.put('/settings', async (c) => {
   const [rows] = await transaction(ctx, [
     {
       sql: `INSERT INTO shop_settings (shop_name, address, phone, tax_id, promptpay_id, receipt_footer, expiry_alert_days,
-              price_level_names, vat_registered, vat_rate, branch_code)
-            VALUES ($1, $2, $3, $4, $5, $6, $7::int, ARRAY(SELECT jsonb_array_elements_text($8::jsonb)), $9::boolean,
-                    $10::numeric, $11)
+              price_level_names, vat_registered, branch_code)
+            VALUES ($1, $2, $3, $4, $5, $6, $7::int, ARRAY(SELECT jsonb_array_elements_text($8::jsonb)), false, $9)
             ON CONFLICT (org_id) DO UPDATE SET shop_name = EXCLUDED.shop_name, address = EXCLUDED.address,
               phone = EXCLUDED.phone, tax_id = EXCLUDED.tax_id, promptpay_id = EXCLUDED.promptpay_id,
               receipt_footer = EXCLUDED.receipt_footer, expiry_alert_days = EXCLUDED.expiry_alert_days,
-              price_level_names = EXCLUDED.price_level_names, vat_registered = EXCLUDED.vat_registered,
-              vat_rate = EXCLUDED.vat_rate, branch_code = EXCLUDED.branch_code, updated_at = now()
+              price_level_names = EXCLUDED.price_level_names, vat_registered = false,
+              branch_code = EXCLUDED.branch_code, updated_at = now()
             RETURNING *, to_json(price_level_names)::text AS level_names_json`,
       params: [
         b.shopName,
@@ -116,8 +111,6 @@ masterRoutes.put('/settings', async (c) => {
         b.receiptFooter || null,
         b.expiryAlertDays,
         JSON.stringify(b.priceLevelNames),
-        b.vatRegistered,
-        b.vatRate,
         b.branchCode,
       ],
     },

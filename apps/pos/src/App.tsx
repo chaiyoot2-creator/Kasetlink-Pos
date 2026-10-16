@@ -22,6 +22,7 @@ import { AccountingPage } from './pages/AccountingPage'
 import { ReceivablesPage } from './pages/ReceivablesPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { AgencyPage } from './pages/AgencyPage'
+import { VisionPage } from './pages/VisionPage'
 import { DeliveryPage } from './pages/delivery/DeliveryPage'
 import { MasterDataPage } from './pages/MasterDataPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -155,6 +156,7 @@ function Routed() {
       {route === 'settings' && <SettingsPage />}
       {route === 'users' && <UsersPage />}
       {route === 'quotations' && <QuotationsPage />}
+      {route === 'vision' && <VisionPage />}
     </AppShell>
   )
 }

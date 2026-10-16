@@ -7,6 +7,7 @@ import { query, transaction, type BatchOp, type RequestCtx, type Row } from '../
 import {
   assignVehicles,
   browserMapsKey,
+  checkServerKey,
   distanceMatrix,
   routeLine,
   serverMapsKey,
@@ -35,6 +36,12 @@ function numOrNull(r: Row, k: string): number | null {
 deliveryRoutes.get('/maps/config', (c) =>
   c.json({ browserKey: browserMapsKey(), hasServerKey: serverMapsKey() !== null }),
 )
+
+/** Setup check for the delivery map: is each key present, and does the server key reach the Routes API? */
+deliveryRoutes.get('/delivery/maps-status', async (c) => {
+  const server = await checkServerKey()
+  return c.json({ browserKey: browserMapsKey() !== null ? 'set' : 'missing', serverKey: server.status, serverDetail: server.detail })
+})
 
 type PlaceKind = 'location' | 'customer' | 'agency'
 const PLACE_TABLE: Record<PlaceKind, { table: string; note: string }> = {

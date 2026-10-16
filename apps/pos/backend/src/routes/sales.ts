@@ -342,8 +342,6 @@ export function mapSaleHeader(r: Row) {
     forAccounting: bool(r, 'for_accounting'),
     taxInvoiceNo: strOrNull(r, 'tax_invoice_no'),
     taxInvoiceAt: strOrNull(r, 'tax_invoice_at'),
-    vatRate: r['vat_rate'] === null || r['vat_rate'] === undefined ? null : num(r, 'vat_rate'),
-    vatAmount: r['vat_amount'] === null || r['vat_amount'] === undefined ? null : num(r, 'vat_amount'),
     buyer: parseBuyer(strOrNull(r, 'buyer_text')),
     accountingSentAt: strOrNull(r, 'accounting_sent_at'),
     dueDate: strOrNull(r, 'due_text'),
