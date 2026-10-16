@@ -4,7 +4,7 @@ import type { AppEnv } from './app-env.js'
 import { currentUser, hasAny, requiredPermissions } from './auth.js'
 import { HttpError, handleError } from './errors.js'
 import { authRoutes } from './routes/auth.js'
-import { buildRequestCtx, resolveStage } from './gate.js'
+import { buildRequestCtx, buildSystemCtx, resolveStage } from './gate.js'
 import { accountingRoutes } from './routes/accounting.js'
 import { agencyRoutes } from './routes/agency.js'
 import { backupRoutes } from './routes/backup.js'
@@ -24,10 +24,12 @@ app.onError(handleError)
 
 app.get('/health', (c) => c.json({ ok: true }))
 
-// Every business route runs as the calling user (app token → Gate → RLS on org_id).
+// Deployed, the app is open to visitors without a FuseBase account, so the shop database is
+// reached with the app's service token and the staff login below is the only gate. Local dev
+// has no service token and keeps using the FuseBase user's app token (Gate → RLS on org_id).
 app.use('*', async (c, next) => {
   if (c.req.path === '/api/health') return next()
-  c.set('ctx', await buildRequestCtx(c))
+  c.set('ctx', process.env.FBS_FEATURE_TOKEN ? await buildSystemCtx() : await buildRequestCtx(c))
   await next()
 })
 
