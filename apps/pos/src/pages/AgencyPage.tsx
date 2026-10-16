@@ -291,10 +291,12 @@ interface FormLine {
   /** Taken from the shop's stock now; ฟาร์มสุข sends the same product back later. */
   fromStock: boolean
   shopProductId: string | null
+  /** Typed-in line sent from shop stock: save it as a ฟาร์มสุข product linked to that shop product. */
+  remember: boolean
 }
 
 function blankLine(): FormLine {
-  return { key: crypto.randomUUID(), productId: null, productName: '', unit: 'กระสอบ', qty: null, stdPrice: null, fromStock: false, shopProductId: null }
+  return { key: crypto.randomUUID(), productId: null, productName: '', unit: 'กระสอบ', qty: null, stdPrice: null, fromStock: false, shopProductId: null, remember: true }
 }
 
 function DeliveryForm({ open, setup, onClose, onSaved }: { open: boolean; setup: Setup; onClose: () => void; onSaved: (d: Delivery) => void }) {
@@ -338,6 +340,22 @@ function DeliveryForm({ open, setup, onClose, onSaved }: { open: boolean; setup:
   }
   const setLine = (key: string, patch: Partial<FormLine>) => setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)))
 
+  /**
+   * Picking the shop product fills the line: a ฟาร์มสุข product already linked to it brings its
+   * own company price (not the shop's selling price); otherwise an empty name takes the shop name.
+   */
+  const pickShopProduct = (l: FormLine, id: string | null) => {
+    const linked = id && !l.productId ? products.find((p) => p.shopProductId === id) : undefined
+    const shop = shopProducts.data?.find((p) => p.id === id)
+    if (linked) {
+      setLine(l.key, { shopProductId: id, productId: linked.id, productName: linked.name, unit: linked.unit, stdPrice: linked.stdPrice })
+    } else if (!l.productId && shop && !l.productName.trim()) {
+      setLine(l.key, { shopProductId: id, productName: shop.name, unit: shop.unit })
+    } else {
+      setLine(l.key, { shopProductId: id })
+    }
+  }
+
   const group = groups.find((g) => g.id === groupId)
   const route = routes.find((r) => r.id === routeId)
   const valid = lines.filter((l) => l.productName.trim() && (l.qty ?? 0) > 0)
@@ -360,6 +378,27 @@ function DeliveryForm({ open, setup, onClose, onSaved }: { open: boolean; setup:
         })
         custId = created.id
       }
+      // Typed-in products sent from shop stock become ฟาร์มสุข products with this company price,
+      // linked to the shop product, so the next delivery fills name and price by itself.
+      const saved = new Map<string, string>()
+      const toSend: FormLine[] = []
+      for (const l of valid) {
+        const name = l.productName.trim()
+        if (!l.productId && l.fromStock && l.shopProductId && l.remember && (l.stdPrice ?? 0) > 0) {
+          let id = saved.get(name)
+          if (!id) {
+            const created = await apiFetch<AgencyProduct>('/agency/products', {
+              method: 'POST',
+              body: { name, unit: l.unit, stdPrice: l.stdPrice, shopProductId: l.shopProductId, isActive: true },
+            })
+            id = created.id
+            saved.set(name, id)
+          }
+          toSend.push({ ...l, productId: id })
+        } else {
+          toSend.push(l)
+        }
+      }
       const d = await apiFetch<Delivery>('/agency/deliveries', {
         method: 'POST',
         body: {
@@ -372,7 +411,7 @@ function DeliveryForm({ open, setup, onClose, onSaved }: { open: boolean; setup:
           routeId,
           note: note.trim() || null,
           stockLocationId: lending ? stockLocationId : null,
-          lines: valid.map((l) => ({
+          lines: toSend.map((l) => ({
             productId: l.productId,
             productName: l.productName.trim(),
             unit: l.unit,
@@ -486,7 +525,7 @@ function DeliveryForm({ open, setup, onClose, onSaved }: { open: boolean; setup:
               <Field label={`จำนวน (${l.unit === 'กระสอบ' ? 'กส.' : l.unit})`}>
                 <NumberInput value={l.qty} onChange={(v) => setLine(l.key, { qty: v })} />
               </Field>
-              <Field label="ราคา/หน่วย">
+              <Field label="ราคาฟาร์มสุข">
                 <NumberInput value={l.stdPrice} onChange={(v) => setLine(l.key, { stdPrice: v })} />
               </Field>
               <Button
@@ -515,7 +554,14 @@ function DeliveryForm({ open, setup, onClose, onSaved }: { open: boolean; setup:
                     loading={shopProducts.loading}
                     value={l.shopProductId}
                     need={l.qty ?? 0}
-                    onChange={(id) => setLine(l.key, { shopProductId: id })}
+                    onChange={(id) => pickShopProduct(l, id)}
+                  />
+                ) : null}
+                {l.fromStock && l.shopProductId ? (
+                  <ShopPriceNote
+                    shop={shopProducts.data?.find((p) => p.id === l.shopProductId)}
+                    line={l}
+                    onRemember={(v) => setLine(l.key, { remember: v })}
                   />
                 ) : null}
               </div>
@@ -1358,6 +1404,27 @@ function SetupDialog({ target, setup, onClose, onSaved }: { target: EditTarget |
 }
 
 // ---------------------------------------------------------------- stock lent to ฟาร์มสุข
+
+/** Shop price next to the company price, so staff do not type the shop's own price by mistake. */
+function ShopPriceNote({ shop, line, onRemember }: { shop: Product | undefined; line: FormLine; onRemember: (v: boolean) => void }) {
+  const shopPrice = shop?.priceLevels.find((p) => p > 0) ?? 0
+  return (
+    <div className="grid gap-1 text-xs text-muted-foreground sm:col-span-2">
+      {shopPrice > 0 ? (
+        <p>
+          ราคาขายหน้าร้าน {baht(shopPrice)} — ค่า Incentive คิดจาก “ราคาฟาร์มสุข” ในช่องด้านบน
+          {line.stdPrice !== null && line.stdPrice === shopPrice ? <span className="text-amber-700"> (ตอนนี้ใส่เท่ากับราคาร้าน ตรวจอีกครั้ง)</span> : null}
+        </p>
+      ) : null}
+      {!line.productId ? (
+        <label className="flex cursor-pointer items-center gap-2">
+          <input type="checkbox" className="size-4 cursor-pointer accent-primary" checked={line.remember} onChange={(e) => onRemember(e.target.checked)} />
+          จำเป็นสินค้าฟาร์มสุข ครั้งหน้าเลือกสินค้าในร้านแล้วใส่ชื่อและราคาฟาร์มสุขให้เอง
+        </label>
+      ) : null}
+    </div>
+  )
+}
 
 function ShopProductSelect({
   products,
