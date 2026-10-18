@@ -11,6 +11,7 @@ import { agencyRoutes } from './routes/agency.js'
 import { backupRoutes } from './routes/backup.js'
 import { imageRoutes } from './routes/images.js'
 import { deliveryRoutes } from './routes/delivery.js'
+import { expenseRoutes } from './routes/expenses.js'
 import { insightRoutes } from './routes/insights.js'
 import { masterRoutes } from './routes/master.js'
 import { purchasingRoutes } from './routes/purchasing.js'
@@ -70,6 +71,7 @@ app.route('/', agencyRoutes)
 app.route('/', deliveryRoutes)
 app.route('/', quotationRoutes)
 app.route('/', analyticsRoutes)
+app.route('/', expenseRoutes)
 
 const port = Number(process.env.BACKEND_PORT) || 3001
 

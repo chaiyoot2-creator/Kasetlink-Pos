@@ -1,5 +1,5 @@
 {
-  "bundleVersion": 16,
+  "bundleVersion": 17,
   "alias": "kasetlink-pos",
   "engine": "postgres",
   "storeType": "sql",
@@ -99,6 +99,12 @@
       "name": "vehicle_documents",
       "file": "0016_vehicle_documents.sql",
       "checksum": "993951be1d7d2ed726e14469eeb7142f51161ef11c9f9503793aa177245cdd0c"
+    },
+    {
+      "version": 17,
+      "name": "expenses",
+      "file": "0017_expenses.sql",
+      "checksum": "54c1a1cbeb45a12c791e0ed59641fce6efeb76cffa221d4f8a014130a775c082"
     }
   ]
 }

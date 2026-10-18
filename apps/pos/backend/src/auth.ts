@@ -36,6 +36,7 @@ export const PERMISSIONS = [
   'reports',
   'accounting',
   'master',
+  'expenses',
   'settings',
   'view.cost',
 ] as const
@@ -46,11 +47,11 @@ export const DEFAULT_ROLES: { key: string; name: string; permissions: Permission
   {
     key: 'manager',
     name: 'ผู้จัดการ',
-    permissions: ['pos.sell', 'quotations', 'sales.view', 'sales.void', 'receivables', 'customers.insight', 'agency', 'delivery', 'purchasing', 'stock', 'alerts', 'reports', 'accounting', 'master', 'view.cost'],
+    permissions: ['pos.sell', 'quotations', 'sales.view', 'sales.void', 'receivables', 'customers.insight', 'agency', 'delivery', 'purchasing', 'stock', 'alerts', 'reports', 'accounting', 'master', 'expenses', 'view.cost'],
     isOwner: false,
   },
-  { key: 'cashier', name: 'พนักงานขาย', permissions: ['pos.sell', 'quotations', 'sales.view', 'receivables', 'alerts'], isOwner: false },
-  { key: 'warehouse', name: 'พนักงานคลัง-จัดส่ง', permissions: ['stock', 'purchasing', 'delivery', 'alerts'], isOwner: false },
+  { key: 'cashier', name: 'พนักงานขาย', permissions: ['pos.sell', 'quotations', 'sales.view', 'receivables', 'alerts', 'expenses'], isOwner: false },
+  { key: 'warehouse', name: 'พนักงานคลัง-จัดส่ง', permissions: ['stock', 'purchasing', 'delivery', 'alerts', 'expenses'], isOwner: false },
 ]
 
 export interface AppUser {
@@ -243,6 +244,7 @@ const RULES: Rule[] = [
   ['GET', /^\/quotations\/[^/]+$/, ['quotations', 'pos.sell']],
   ['*', /^\/quotations(\/|$)/, ['quotations']],
   ['*', /^\/accounting\//, ['accounting']],
+  ['*', /^\/expenses(\/|$)/, ['expenses']],
   ['*', /^\/agency\//, ['agency']],
   ['POST', /^\/delivery\/orders\/from-sale\//, ['delivery', 'pos.sell']],
   ['GET', /^\/delivery\/places$/, ['delivery', 'master']],

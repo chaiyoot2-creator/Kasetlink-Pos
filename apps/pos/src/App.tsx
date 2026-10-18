@@ -7,6 +7,7 @@ import { EnvPanel } from './components/EnvPanel'
 import { AppShell, NAV, canOpen } from './components/AppShell'
 import { startAnalytics, trackAppOpened, trackPage } from './lib/analytics'
 import { AnalyticsPage } from './pages/AnalyticsPage'
+import { ExpensesPage } from './pages/expenses/ExpensesPage'
 import { AuthGate, useAuth } from './lib/auth'
 import { UsersPage } from './pages/UsersPage'
 import { QuotationsPage } from './pages/QuotationsPage'
@@ -169,6 +170,7 @@ function Routed() {
       {route === 'quotations' && <QuotationsPage />}
       {route === 'vision' && <VisionPage />}
       {route === 'analytics' && <AnalyticsPage />}
+      {route === 'expenses' && <ExpensesPage />}
     </AppShell>
   )
 }

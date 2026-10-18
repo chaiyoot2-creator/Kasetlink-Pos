@@ -22,6 +22,7 @@ export type Permission =
   | 'reports'
   | 'accounting'
   | 'master'
+  | 'expenses'
   | 'settings'
   | 'view.cost'
   | 'users.manage'
@@ -41,6 +42,7 @@ export const PERMISSION_LABEL: Record<Exclude<Permission, 'users.manage'>, { lab
   reports: { label: 'กำไรขาดทุน', hint: 'รายงานกำไร ยอดขาย' },
   accounting: { label: 'ส่งบัญชี', hint: 'ใบเสร็จเต็มรูป ส่งสำนักงานบัญชี' },
   master: { label: 'ข้อมูลหลัก', hint: 'เพิ่ม/แก้สินค้า ลูกค้า แบรนด์ ผู้จำหน่าย' },
+  expenses: { label: 'ค่าใช้จ่าย', hint: 'บันทึก แก้ไข ลบค่าใช้จ่ายร้าน สรุปรายเดือน/ปี' },
   settings: { label: 'ตั้งค่าร้าน', hint: 'ข้อมูลร้าน เครื่องพิมพ์ สำรองข้อมูล' },
   'view.cost': { label: 'เห็นต้นทุน/กำไร', hint: 'ทุนเฉลี่ยและกำไรในบิล/สินค้า' },
 }

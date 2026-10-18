@@ -1,5 +1,5 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react'
-import { Activity, BellRing, Boxes, ChartLine, Database, FileSignature, FileText, HandCoins, Handshake, KeyRound, LogOut, MapPinned, Menu, ReceiptText, ScanEye, Settings, ShoppingCart, Sprout, Truck, UserCog, Users } from 'lucide-react'
+import { Activity, BellRing, Wallet, Boxes, ChartLine, Database, FileSignature, FileText, HandCoins, Handshake, KeyRound, LogOut, MapPinned, Menu, ReceiptText, ScanEye, Settings, ShoppingCart, Sprout, Truck, UserCog, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useApp } from '@/lib/app-context'
@@ -34,6 +34,7 @@ export const NAV: NavItem[] = [
   { route: 'alerts', label: 'แจ้งเตือน', icon: BellRing, perms: ['alerts'] },
   { route: 'reports', label: 'กำไรขาดทุน', icon: ChartLine, perms: ['reports'] },
   { route: 'accounting', label: 'ส่งบัญชี', icon: FileText, perms: ['accounting'] },
+  { route: 'expenses', label: 'ค่าใช้จ่าย', icon: Wallet, perms: ['expenses'] },
   { route: 'master', label: 'ข้อมูลหลัก', icon: Database, perms: ['master'] },
   { route: 'settings', label: 'ตั้งค่า', icon: Settings, perms: ['settings'] },
   { route: 'users', label: 'ผู้ใช้และสิทธิ์', icon: UserCog, perms: ['users.manage'] },

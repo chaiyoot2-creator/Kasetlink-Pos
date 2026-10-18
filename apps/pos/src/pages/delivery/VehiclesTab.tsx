@@ -1,6 +1,6 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react'
 import { toast } from 'sonner'
-import { Download, FileCheck2, Loader2, Pencil, Plus, ShieldCheck, Trash2, Truck } from 'lucide-react'
+import { Download, FileCheck2, Loader2, Pencil, Plus, ShieldCheck, Trash2, Truck, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,11 @@ import { Switch } from '@/components/ui/switch'
 import { Empty, Field, NumberInput } from '@/components/common'
 import { apiFetch, errorMessage } from '@/lib/api'
 import { baht, daysUntil, dateOnly, todayISO } from '@/lib/format'
+import { useAuth } from '@/lib/auth'
+import { useApi } from '@/lib/use-api'
 import { cn } from '@/lib/utils'
+import { VehicleExpensesDialog } from '@/pages/expenses/VehicleExpensesDialog'
+import { MONTH_LONG, thaiYear } from '@/pages/expenses/types'
 import { VEHICLE_TYPE_LABEL, kg, type Vehicle, type VehiclePolicy } from './types'
 
 type Form = Omit<Vehicle, 'id'>
@@ -121,6 +125,13 @@ function exportCsv(vehicles: Vehicle[]) {
 export function VehiclesTab({ vehicles, onChanged }: { vehicles: Vehicle[]; onChanged: () => void }) {
   const [editing, setEditing] = useState<{ id: string | null; form: Form } | null>(null)
   const [deleting, setDeleting] = useState<Vehicle | null>(null)
+  const [expensesOf, setExpensesOf] = useState<Vehicle | null>(null)
+  const canEditExpenses = useAuth().can('expenses')
+  const today = todayISO()
+  const year = Number(today.slice(0, 4))
+  const month = Number(today.slice(5, 7))
+  const totals = useApi<{ vehicleId: string; yearTotal: number; monthTotal: number; count: number }[]>(`/delivery/vehicles/expense-totals?year=${year}&month=${month}`)
+  const totalOf = (id: string) => totals.data?.find((t) => t.vehicleId === id)
   const active = vehicles.filter((v) => v.isActive)
   const docs = active.flatMap((v) => [v.insurance.expiry, v.act.expiry, v.tax.expiry].map(docState))
   const expired = docs.filter((s) => s === 'expired').length
@@ -199,6 +210,20 @@ export function VehiclesTab({ vehicles, onChanged }: { vehicles: Vehicle[]; onCh
                 {line('ค่าใช้จ่าย', costText(v.tax.cost))}
               </DocBox>
             </div>
+            <button
+              type="button"
+              onClick={() => setExpensesOf(v)}
+              className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-dashed px-3 py-2 text-left text-sm hover:border-primary hover:bg-primary/5"
+            >
+              <Wallet className="size-4 text-muted-foreground" />
+              <span>
+                ค่าใช้จ่าย{MONTH_LONG[month - 1]} <b className="tabular">฿{baht(totalOf(v.id)?.monthTotal ?? 0)}</b>
+              </span>
+              <span>
+                ปี {thaiYear(year)} <b className="tabular">฿{baht(totalOf(v.id)?.yearTotal ?? 0)}</b>
+              </span>
+              <span className="ml-auto text-xs text-primary">ดูรายละเอียด →</span>
+            </button>
           </article>
         ))}
       </div>
@@ -209,6 +234,12 @@ export function VehiclesTab({ vehicles, onChanged }: { vehicles: Vehicle[]; onCh
           setEditing(null)
           onChanged()
         }}
+      />
+      <VehicleExpensesDialog
+        vehicle={expensesOf ? { id: expensesOf.id, label: expensesOf.plate ?? expensesOf.name, name: expensesOf.name } : null}
+        canEdit={canEditExpenses}
+        onClose={() => setExpensesOf(null)}
+        onChanged={() => void totals.reload()}
       />
       <DeleteDialog
         vehicle={deleting}

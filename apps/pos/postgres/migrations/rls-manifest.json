@@ -42,6 +42,8 @@
     "backup_config": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
     "stock_documents": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
     "usage_events": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
-    "usage_sessions": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" }
+    "usage_sessions": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "expense_categories": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" },
+    "expenses": { "classification": "tenant", "schemaName": "public", "orgColumn": "org_id" }
   }
 }

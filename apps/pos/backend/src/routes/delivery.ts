@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import type { AppEnv } from '../app-env.js'
 import { HttpError } from '../errors.js'
+import { EXPENSE_SELECT, mapExpense } from './expenses.js'
 import { query, transaction, type BatchOp, type RequestCtx, type Row } from '../gate.js'
 import {
   assignVehicles,
@@ -251,11 +252,69 @@ deliveryRoutes.put('/delivery/vehicles/:id', async (c) => {
 deliveryRoutes.delete('/delivery/vehicles/:id', async (c) => {
   const id = uuid.parse(c.req.param('id'))
   const ctx = c.get('ctx')
-  const [used] = await query(ctx, 'SELECT EXISTS (SELECT 1 FROM delivery_trips WHERE vehicle_id = $1::uuid) AS used', [id])
-  if (bool(used ?? {}, 'used')) throw new HttpError(409, 'รถคันนี้มีประวัติเที่ยวส่งแล้ว ลบไม่ได้ — ปิด "ใช้งาน" แทน', 'in_use')
+  const [used] = await query(
+    ctx,
+    `SELECT EXISTS (SELECT 1 FROM delivery_trips WHERE vehicle_id = $1::uuid) AS trips,
+            EXISTS (SELECT 1 FROM expenses WHERE vehicle_id = $1::uuid) AS expenses`,
+    [id],
+  )
+  if (bool(used ?? {}, 'trips')) throw new HttpError(409, 'รถคันนี้มีประวัติเที่ยวส่งแล้ว ลบไม่ได้ — ปิด "ใช้งาน" แทน', 'in_use')
+  if (bool(used ?? {}, 'expenses')) throw new HttpError(409, 'รถคันนี้มีค่าใช้จ่ายบันทึกไว้ ลบไม่ได้ — ปิด "ใช้งาน" แทน', 'in_use')
   const [rows] = await transaction(ctx, [{ sql: 'DELETE FROM vehicles WHERE id = $1::uuid RETURNING id', params: [id] }])
   if (!rows?.[0]) throw new HttpError(404, 'ไม่พบรถ')
   return c.json({ ok: true })
+})
+
+const yearParam = z.coerce.number().int().min(2000).max(2100)
+
+/** Expense totals per vehicle for the cards: the chosen year and month (Bangkok calendar). */
+deliveryRoutes.get('/delivery/vehicles/expense-totals', async (c) => {
+  const year = yearParam.parse(c.req.query('year'))
+  const month = z.coerce.number().int().min(1).max(12).parse(c.req.query('month'))
+  const rows = await query(
+    c.get('ctx'),
+    `SELECT vehicle_id,
+            SUM(amount) AS year_total,
+            SUM(amount) FILTER (WHERE EXTRACT(MONTH FROM expense_date) = $3) AS month_total,
+            COUNT(*) AS n
+       FROM expenses
+      WHERE vehicle_id IS NOT NULL AND expense_date BETWEEN $1::date AND $2::date
+      GROUP BY vehicle_id`,
+    [`${year}-01-01`, `${year}-12-31`, month],
+  )
+  return c.json(
+    rows.map((r) => ({ vehicleId: str(r, 'vehicle_id'), yearTotal: round2(num(r, 'year_total')), monthTotal: round2(num(r, 'month_total')), count: num(r, 'n') })),
+  )
+})
+
+/** One vehicle's expenses for a year, with totals by category and by month. */
+deliveryRoutes.get('/delivery/vehicles/:id/expenses', async (c) => {
+  const id = uuid.parse(c.req.param('id'))
+  const year = yearParam.parse(c.req.query('year'))
+  const rows = await query(
+    c.get('ctx'),
+    `${EXPENSE_SELECT} WHERE e.vehicle_id = $1::uuid AND e.expense_date BETWEEN $2::date AND $3::date
+      ORDER BY e.expense_date DESC, e.created_at DESC`,
+    [id, `${year}-01-01`, `${year}-12-31`],
+  )
+  const items = rows.map(mapExpense)
+  const byCategory = new Map<string, { name: string; total: number; count: number }>()
+  const months = Array.from({ length: 12 }, () => 0)
+  for (const e of items) {
+    const cat = byCategory.get(e.categoryId) ?? { name: e.categoryName, total: 0, count: 0 }
+    cat.total = round2(cat.total + e.amount)
+    cat.count += 1
+    byCategory.set(e.categoryId, cat)
+    const m = Number(e.expenseDate.slice(5, 7)) - 1
+    months[m] = round2((months[m] ?? 0) + e.amount)
+  }
+  return c.json({
+    year,
+    total: round2(items.reduce((s, e) => s + e.amount, 0)),
+    items,
+    categories: [...byCategory.entries()].map(([categoryId, v]) => ({ categoryId, ...v })).sort((a, b) => b.total - a.total),
+    months: months.map((total, i) => ({ month: i + 1, total })),
+  })
 })
 
 // ---------------------------------------------------------------- delivery orders
