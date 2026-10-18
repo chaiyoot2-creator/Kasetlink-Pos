@@ -25,6 +25,20 @@ export interface Vehicle {
   driverName: string | null
   note: string | null
   isActive: boolean
+  /** ประกันภาคสมัครใจ */
+  insurance: VehiclePolicy
+  /** พ.ร.บ. */
+  act: VehiclePolicy
+  /** ทะเบียน / ภาษีประจำปี */
+  tax: { expiry: string | null; cost: number | null }
+}
+
+/** Dates are `YYYY-MM-DD` (Christian era). */
+export interface VehiclePolicy {
+  company: string | null
+  start: string | null
+  expiry: string | null
+  cost: number | null
 }
 
 export interface DeliveryOrder {

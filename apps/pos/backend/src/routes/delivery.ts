@@ -141,8 +141,43 @@ function mapVehicle(r: Row) {
     driverName: strOrNull(r, 'driver_name'),
     note: strOrNull(r, 'note'),
     isActive: bool(r, 'is_active'),
+    insurance: {
+      company: strOrNull(r, 'insurance_company'),
+      start: dateOnly(r, 'insurance_start'),
+      expiry: dateOnly(r, 'insurance_expiry'),
+      cost: r['insurance_cost'] == null ? null : num(r, 'insurance_cost'),
+    },
+    act: {
+      company: strOrNull(r, 'act_company'),
+      start: dateOnly(r, 'act_start'),
+      expiry: dateOnly(r, 'act_expiry'),
+      cost: r['act_cost'] == null ? null : num(r, 'act_cost'),
+    },
+    tax: {
+      expiry: dateOnly(r, 'tax_expiry'),
+      cost: r['tax_cost'] == null ? null : num(r, 'tax_cost'),
+    },
   }
 }
+
+/** Christian-era date: a Buddhist-era year (25xx) typed by mistake would put expiry centuries away. */
+const docDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((d) => d >= '2000-01-01' && d <= '2100-12-31', 'ปีต้องเป็น ค.ศ. (เช่น 2026) ไม่ใช่ พ.ศ.')
+  .nullish()
+  .transform((v) => v ?? null)
+const docCost = z.number().min(0).max(10_000_000).nullish().transform((v) => v ?? null)
+const docCompany = z
+  .string()
+  .trim()
+  .max(120)
+  .nullish()
+  .transform((v) => v || null)
+const policySchema = z
+  .object({ company: docCompany, start: docDate, expiry: docDate, cost: docCost })
+  .refine((p) => !p.start || !p.expiry || p.start <= p.expiry, 'วันเริ่มต้องไม่เกินวันหมดอายุ')
+const emptyPolicy = { company: null, start: null, expiry: null, cost: null }
 
 const vehicleSchema = z
   .object({
@@ -155,8 +190,31 @@ const vehicleSchema = z
     driverName: z.string().trim().max(80).nullish(),
     note: z.string().trim().max(300).nullish(),
     isActive: z.boolean().default(true),
+    insurance: policySchema.default(emptyPolicy),
+    act: policySchema.default(emptyPolicy),
+    tax: z.object({ expiry: docDate, cost: docCost }).default({ expiry: null, cost: null }),
   })
   .refine((v) => v.minLoadKg <= v.capacityKg, 'น้ำหนักขั้นต่ำต้องไม่เกินความจุ')
+
+type VehicleInput = z.infer<typeof vehicleSchema>
+
+/** $1–$19 in column order of VEHICLE_COLUMNS. */
+function vehicleParams(b: VehicleInput): unknown[] {
+  return [
+    b.name, b.plate || null, b.vehicleType, b.minLoadKg, b.capacityKg, b.costPerKm, b.driverName || null, b.note || null, b.isActive,
+    b.insurance.company, b.insurance.start, b.insurance.expiry, b.insurance.cost,
+    b.act.company, b.act.start, b.act.expiry, b.act.cost,
+    b.tax.expiry, b.tax.cost,
+  ]
+}
+
+const VEHICLE_COLUMNS: [column: string, cast: string][] = [
+  ['name', ''], ['plate', ''], ['vehicle_type', ''], ['min_load_kg', '::numeric'], ['capacity_kg', '::numeric'], ['cost_per_km', '::numeric'],
+  ['driver_name', ''], ['note', ''], ['is_active', '::boolean'],
+  ['insurance_company', ''], ['insurance_start', '::date'], ['insurance_expiry', '::date'], ['insurance_cost', '::numeric'],
+  ['act_company', ''], ['act_start', '::date'], ['act_expiry', '::date'], ['act_cost', '::numeric'],
+  ['tax_expiry', '::date'], ['tax_cost', '::numeric'],
+]
 
 deliveryRoutes.get('/delivery/vehicles', async (c) => {
   const rows = await query(c.get('ctx'), 'SELECT * FROM vehicles ORDER BY is_active DESC, capacity_kg DESC, name')
@@ -167,9 +225,9 @@ deliveryRoutes.post('/delivery/vehicles', async (c) => {
   const b = vehicleSchema.parse(await c.req.json())
   const [rows] = await transaction(c.get('ctx'), [
     {
-      sql: `INSERT INTO vehicles (name, plate, vehicle_type, min_load_kg, capacity_kg, cost_per_km, driver_name, note, is_active)
-            VALUES ($1, $2, $3, $4::numeric, $5::numeric, $6::numeric, $7, $8, $9::boolean) RETURNING *`,
-      params: [b.name, b.plate || null, b.vehicleType, b.minLoadKg, b.capacityKg, b.costPerKm, b.driverName || null, b.note || null, b.isActive],
+      sql: `INSERT INTO vehicles (${VEHICLE_COLUMNS.map(([col]) => col).join(', ')})
+            VALUES (${VEHICLE_COLUMNS.map(([, cast], i) => `$${i + 1}${cast}`).join(', ')}) RETURNING *`,
+      params: vehicleParams(b),
     },
   ])
   return c.json(mapVehicle(rows?.[0] ?? {}), 201)
@@ -180,14 +238,24 @@ deliveryRoutes.put('/delivery/vehicles/:id', async (c) => {
   const b = vehicleSchema.parse(await c.req.json())
   const [rows] = await transaction(c.get('ctx'), [
     {
-      sql: `UPDATE vehicles SET name = $1, plate = $2, vehicle_type = $3, min_load_kg = $4::numeric, capacity_kg = $5::numeric,
-              cost_per_km = $6::numeric, driver_name = $7, note = $8, is_active = $9::boolean, updated_at = now()
-            WHERE id = $10::uuid RETURNING *`,
-      params: [b.name, b.plate || null, b.vehicleType, b.minLoadKg, b.capacityKg, b.costPerKm, b.driverName || null, b.note || null, b.isActive, id],
+      sql: `UPDATE vehicles SET ${VEHICLE_COLUMNS.map(([col, cast], i) => `${col} = $${i + 1}${cast}`).join(', ')}, updated_at = now()
+            WHERE id = $${VEHICLE_COLUMNS.length + 1}::uuid RETURNING *`,
+      params: [...vehicleParams(b), id],
     },
   ])
   if (!rows?.[0]) throw new HttpError(404, 'ไม่พบรถ')
   return c.json(mapVehicle(rows[0]))
+})
+
+/** Remove a vehicle that never ran a trip; one with trip history must be switched off instead. */
+deliveryRoutes.delete('/delivery/vehicles/:id', async (c) => {
+  const id = uuid.parse(c.req.param('id'))
+  const ctx = c.get('ctx')
+  const [used] = await query(ctx, 'SELECT EXISTS (SELECT 1 FROM delivery_trips WHERE vehicle_id = $1::uuid) AS used', [id])
+  if (bool(used ?? {}, 'used')) throw new HttpError(409, 'รถคันนี้มีประวัติเที่ยวส่งแล้ว ลบไม่ได้ — ปิด "ใช้งาน" แทน', 'in_use')
+  const [rows] = await transaction(ctx, [{ sql: 'DELETE FROM vehicles WHERE id = $1::uuid RETURNING id', params: [id] }])
+  if (!rows?.[0]) throw new HttpError(404, 'ไม่พบรถ')
+  return c.json({ ok: true })
 })
 
 // ---------------------------------------------------------------- delivery orders
