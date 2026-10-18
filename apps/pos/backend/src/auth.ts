@@ -36,6 +36,7 @@ export const PERMISSIONS = [
   'reports',
   'accounting',
   'master',
+  'expenses',
   'settings',
   'view.cost',
 ] as const
@@ -46,11 +47,11 @@ export const DEFAULT_ROLES: { key: string; name: string; permissions: Permission
   {
     key: 'manager',
     name: 'ผู้จัดการ',
-    permissions: ['pos.sell', 'quotations', 'sales.view', 'sales.void', 'receivables', 'customers.insight', 'agency', 'delivery', 'purchasing', 'stock', 'alerts', 'reports', 'accounting', 'master', 'view.cost'],
+    permissions: ['pos.sell', 'quotations', 'sales.view', 'sales.void', 'receivables', 'customers.insight', 'agency', 'delivery', 'purchasing', 'stock', 'alerts', 'reports', 'accounting', 'master', 'expenses', 'view.cost'],
     isOwner: false,
   },
-  { key: 'cashier', name: 'พนักงานขาย', permissions: ['pos.sell', 'quotations', 'sales.view', 'receivables', 'alerts'], isOwner: false },
-  { key: 'warehouse', name: 'พนักงานคลัง-จัดส่ง', permissions: ['stock', 'purchasing', 'delivery', 'alerts'], isOwner: false },
+  { key: 'cashier', name: 'พนักงานขาย', permissions: ['pos.sell', 'quotations', 'sales.view', 'receivables', 'alerts', 'expenses'], isOwner: false },
+  { key: 'warehouse', name: 'พนักงานคลัง-จัดส่ง', permissions: ['stock', 'purchasing', 'delivery', 'alerts', 'expenses'], isOwner: false },
 ]
 
 export interface AppUser {
@@ -59,6 +60,8 @@ export interface AppUser {
   displayName: string
   roleId: string
   roleName: string
+  /** Built-in role this account's role came from (`owner`, `manager`, …); null for custom roles. */
+  roleKey: string | null
   isOwner: boolean
   permissions: Permission[]
   sessionVersion: number
@@ -138,7 +141,7 @@ async function readToken(ctx: RequestCtx, token: string): Promise<{ userId: stri
 // ---------------------------------------------------------------- users
 
 const USER_SELECT = `
-  SELECT u.*, r.name AS role_name, r.is_owner, to_json(r.permissions)::text AS permissions_json
+  SELECT u.*, r.name AS role_name, r.role_key, r.is_owner, to_json(r.permissions)::text AS permissions_json
     FROM app_users u JOIN app_roles r ON r.id = u.role_id`
 
 export function mapAppUser(r: Row): AppUser & { isActive: boolean; lastLoginAt: string | null; lockedUntil: string | null } {
@@ -156,6 +159,7 @@ export function mapAppUser(r: Row): AppUser & { isActive: boolean; lastLoginAt: 
     displayName: str(r, 'display_name'),
     roleId: str(r, 'role_id'),
     roleName: str(r, 'role_name'),
+    roleKey: strOrNull(r, 'role_key'),
     isOwner,
     permissions: isOwner ? [...PERMISSIONS, 'users.manage'] : perms.filter((p) => p !== 'users.manage'),
     sessionVersion: num(r, 'session_version'),
@@ -240,6 +244,7 @@ const RULES: Rule[] = [
   ['GET', /^\/quotations\/[^/]+$/, ['quotations', 'pos.sell']],
   ['*', /^\/quotations(\/|$)/, ['quotations']],
   ['*', /^\/accounting\//, ['accounting']],
+  ['*', /^\/expenses(\/|$)/, ['expenses']],
   ['*', /^\/agency\//, ['agency']],
   ['POST', /^\/delivery\/orders\/from-sale\//, ['delivery', 'pos.sell']],
   ['GET', /^\/delivery\/places$/, ['delivery', 'master']],
@@ -255,6 +260,11 @@ export function requiredPermissions(method: string, path: string): Permission[] 
     if ((m === '*' || m === method) && re.test(path)) return perms
   }
   return null
+}
+
+/** Usage analytics: the owner role and the built-in manager role only. */
+export function canViewAnalytics(user: AppUser): boolean {
+  return user.isOwner || user.roleKey === 'manager'
 }
 
 export function hasAny(user: AppUser, perms: Permission[]): boolean {

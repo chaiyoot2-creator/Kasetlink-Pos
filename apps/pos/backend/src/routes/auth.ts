@@ -17,6 +17,7 @@ import {
   isLocked,
   issueToken,
   mapAppUser,
+  canViewAnalytics,
   verifyPassword,
   type AppUser,
 } from '../auth.js'
@@ -36,7 +37,7 @@ const password = z.string().min(6, 'รหัสผ่านอย่างน�
 const displayName = z.string().trim().min(1).max(80)
 
 function publicUser(u: AppUser) {
-  return { id: u.id, username: u.username, displayName: u.displayName, roleName: u.roleName, isOwner: u.isOwner, permissions: u.permissions }
+  return { id: u.id, username: u.username, displayName: u.displayName, roleName: u.roleName, isOwner: u.isOwner, permissions: u.permissions, canViewAnalytics: canViewAnalytics(u) }
 }
 
 async function startSession(c: Context<AppEnv>, ctx: RequestCtx, user: AppUser) {

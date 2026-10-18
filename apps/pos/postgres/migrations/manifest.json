@@ -1,5 +1,5 @@
 {
-  "bundleVersion": 14,
+  "bundleVersion": 17,
   "alias": "kasetlink-pos",
   "engine": "postgres",
   "storeType": "sql",
@@ -87,6 +87,24 @@
       "name": "quotations",
       "file": "0014_quotations.sql",
       "checksum": "5570a4d1b872f820780743f6999a9e95e852aa2695647aec28b1e9f5cb340938"
+    },
+    {
+      "version": 15,
+      "name": "usage_analytics",
+      "file": "0015_usage_analytics.sql",
+      "checksum": "bcbe27feb1649c8b93f43b2c3430fe0a9e72afe0951c76305ca9a1a73994db66"
+    },
+    {
+      "version": 16,
+      "name": "vehicle_documents",
+      "file": "0016_vehicle_documents.sql",
+      "checksum": "993951be1d7d2ed726e14469eeb7142f51161ef11c9f9503793aa177245cdd0c"
+    },
+    {
+      "version": 17,
+      "name": "expenses",
+      "file": "0017_expenses.sql",
+      "checksum": "54c1a1cbeb45a12c791e0ed59641fce6efeb76cffa221d4f8a014130a775c082"
     }
   ]
 }

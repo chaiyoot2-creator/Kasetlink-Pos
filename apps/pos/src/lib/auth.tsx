@@ -4,6 +4,7 @@ import { Eye, EyeOff, Loader2, LogIn, Sprout } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ErrorBox, Field } from '@/components/common'
+import { setAnalyticsUser } from './analytics'
 import { ApiFailure, apiFetch, clearSession, errorMessage, onSessionEnded, setSession } from './api'
 
 export type Permission =
@@ -21,6 +22,7 @@ export type Permission =
   | 'reports'
   | 'accounting'
   | 'master'
+  | 'expenses'
   | 'settings'
   | 'view.cost'
   | 'users.manage'
@@ -40,6 +42,7 @@ export const PERMISSION_LABEL: Record<Exclude<Permission, 'users.manage'>, { lab
   reports: { label: 'กำไรขาดทุน', hint: 'รายงานกำไร ยอดขาย' },
   accounting: { label: 'ส่งบัญชี', hint: 'ใบเสร็จเต็มรูป ส่งสำนักงานบัญชี' },
   master: { label: 'ข้อมูลหลัก', hint: 'เพิ่ม/แก้สินค้า ลูกค้า แบรนด์ ผู้จำหน่าย' },
+  expenses: { label: 'ค่าใช้จ่าย', hint: 'บันทึก แก้ไข ลบค่าใช้จ่ายร้าน สรุปรายเดือน/ปี' },
   settings: { label: 'ตั้งค่าร้าน', hint: 'ข้อมูลร้าน เครื่องพิมพ์ สำรองข้อมูล' },
   'view.cost': { label: 'เห็นต้นทุน/กำไร', hint: 'ทุนเฉลี่ยและกำไรในบิล/สินค้า' },
 }
@@ -51,6 +54,8 @@ export interface StaffUser {
   roleName: string
   isOwner: boolean
   permissions: Permission[]
+  /** Owner or the built-in manager role: may open the usage analytics page. */
+  canViewAnalytics: boolean
 }
 
 interface AuthStatus {
@@ -97,6 +102,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
     onSessionEnded(() => setStatus((s) => (s ? { ...s, user: null } : s)))
     return () => onSessionEnded(null)
   }, [refresh])
+
+  const signedInId = status?.user?.id ?? null
+  useEffect(() => setAnalyticsUser(signedInId), [signedInId])
 
   const signedIn = (res: SessionResponse) => {
     setSession(res.token)

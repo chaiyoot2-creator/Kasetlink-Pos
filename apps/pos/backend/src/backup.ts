@@ -61,6 +61,8 @@ const TABLES: { table: string; sheet: string }[] = [
   { table: 'delivery_trips', sheet: 'จัดส่ง-เที่ยวรถ' },
   { table: 'delivery_trip_stops', sheet: 'จัดส่ง-จุดส่ง' },
   { table: 'vehicles', sheet: 'รถขนส่ง' },
+  { table: 'expenses', sheet: 'ค่าใช้จ่าย' },
+  { table: 'expense_categories', sheet: 'หมวดค่าใช้จ่าย' },
   { table: 'locations', sheet: 'โซน' },
   { table: 'terminals', sheet: 'เครื่อง' },
   { table: 'shop_settings', sheet: 'ตั้งค่าร้าน' },

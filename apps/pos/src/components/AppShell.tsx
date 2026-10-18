@@ -1,9 +1,9 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from 'react'
-import { BellRing, Boxes, ChartLine, Database, FileSignature, FileText, HandCoins, Handshake, KeyRound, LogOut, MapPinned, Menu, ReceiptText, ScanEye, Settings, ShoppingCart, Sprout, Truck, UserCog, Users } from 'lucide-react'
+import { Activity, BellRing, Wallet, Boxes, ChartLine, Database, FileSignature, FileText, HandCoins, Handshake, KeyRound, LogOut, MapPinned, Menu, ReceiptText, ScanEye, Settings, ShoppingCart, Sprout, Truck, UserCog, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useApp } from '@/lib/app-context'
-import { useAuth, type Permission } from '@/lib/auth'
+import { useAuth, type Permission, type StaffUser } from '@/lib/auth'
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog'
 import { apiFetch } from '@/lib/api'
 import type { Alerts } from '@/lib/types'
@@ -15,6 +15,8 @@ export interface NavItem {
   icon: ComponentType<{ className?: string }>
   /** Any one of these lets the user open the page. */
   perms: Permission[]
+  /** Replaces `perms` for pages gated on something other than a permission. */
+  allow?: (user: StaffUser) => boolean
   /** Not built yet: shown with a "เร็วๆ นี้" tag. */
   soon?: boolean
 }
@@ -32,11 +34,17 @@ export const NAV: NavItem[] = [
   { route: 'alerts', label: 'แจ้งเตือน', icon: BellRing, perms: ['alerts'] },
   { route: 'reports', label: 'กำไรขาดทุน', icon: ChartLine, perms: ['reports'] },
   { route: 'accounting', label: 'ส่งบัญชี', icon: FileText, perms: ['accounting'] },
+  { route: 'expenses', label: 'ค่าใช้จ่าย', icon: Wallet, perms: ['expenses'] },
   { route: 'master', label: 'ข้อมูลหลัก', icon: Database, perms: ['master'] },
   { route: 'settings', label: 'ตั้งค่า', icon: Settings, perms: ['settings'] },
   { route: 'users', label: 'ผู้ใช้และสิทธิ์', icon: UserCog, perms: ['users.manage'] },
+  { route: 'analytics', label: 'สถิติการใช้งาน', icon: Activity, perms: [], allow: (u) => u.canViewAnalytics },
   { route: 'vision', label: 'AI Vision', icon: ScanEye, perms: ['pos.sell', 'stock'], soon: true },
 ]
+
+export function canOpen(item: NavItem, auth: { user: StaffUser; can: (...perms: Permission[]) => boolean }): boolean {
+  return item.allow ? item.allow(auth.user) : auth.can(...item.perms)
+}
 
 const MOBILE_PRIMARY = ['pos', 'sales', 'stock', 'alerts']
 
@@ -65,7 +73,7 @@ export function AppShell({ route, go, children }: { route: string; go: (r: strin
   const [moreOpen, setMoreOpen] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
   const auth = useAuth()
-  const nav = NAV.filter((n) => auth.can(...n.perms))
+  const nav = NAV.filter((n) => canOpen(n, auth))
   const mobilePrimary = nav.filter((n) => MOBILE_PRIMARY.includes(n.route)).slice(0, 4)
   const userBox = (
     <div className="grid gap-1">
