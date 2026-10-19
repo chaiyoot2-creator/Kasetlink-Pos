@@ -231,6 +231,7 @@ const RULES: Rule[] = [
   ['POST', /^\/customers$/, ['master', 'pos.sell']],
   ['*', /^\/customers\//, ['master']],
   ['*', /^\/(products|brands|suppliers|locations)(\/|$)/, ['master']],
+  ['*', /^\/import\//, ['master']],
   ['POST', /^\/uploads\//, ['master']],
   ['*', /^\/(settings|backup)(\/|$)/, ['settings']],
   ['*', /^\/(purchase-orders|receipts)(\/|$)/, ['purchasing']],

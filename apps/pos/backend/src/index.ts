@@ -14,6 +14,7 @@ import { insightRoutes } from './routes/insights.js'
 import { masterRoutes } from './routes/master.js'
 import { purchasingRoutes } from './routes/purchasing.js'
 import { quotationRoutes } from './routes/quotations.js'
+import { importRoutes } from './routes/imports.js'
 import { reportRoutes } from './routes/reports.js'
 import { salesRoutes } from './routes/sales.js'
 import { stockRoutes } from './routes/stock.js'
@@ -63,6 +64,7 @@ app.route('/', imageRoutes)
 app.route('/', agencyRoutes)
 app.route('/', deliveryRoutes)
 app.route('/', quotationRoutes)
+app.route('/', importRoutes)
 
 const port = Number(process.env.BACKEND_PORT) || 3001
 

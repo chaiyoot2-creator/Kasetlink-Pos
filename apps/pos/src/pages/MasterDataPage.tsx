@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { FileText, HandCoins, Loader2, Plus, Printer, Search, Trash2 } from 'lucide-react'
+import { FileSpreadsheet, FileText, HandCoins, Loader2, Plus, Printer, Search, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Empty, ErrorBox, Field, Loading, NumberInput, PageHeader, TableWrap } from '@/components/common'
+import { ImportDialog } from '@/components/ImportDialog'
 import { ProductImage } from '@/components/ProductImage'
 import { ProductImageField } from '@/components/ProductImageField'
 import { ProductPicker } from '@/components/ProductPicker'
@@ -130,6 +131,7 @@ function Products() {
   )
   const brands = useApi<Brand[]>('/brands')
   const [editing, setEditing] = useState<{ id: string | null; form: ProductForm; imageUrl: string | null } | null>(null)
+  const [importing, setImporting] = useState(false)
 
   return (
     <div className="grid gap-3">
@@ -153,6 +155,9 @@ function Products() {
         </div>
         <Button className="cursor-pointer" onClick={() => setEditing({ id: null, form: { ...emptyProduct }, imageUrl: null })}>
           <Plus /> เพิ่มสินค้า
+        </Button>
+        <Button variant="outline" className="cursor-pointer" onClick={() => setImporting(true)}>
+          <FileSpreadsheet /> นำเข้า Excel
         </Button>
       </div>
       {error ? <ErrorBox message={error} onRetry={() => void reload()} /> : null}
@@ -228,6 +233,7 @@ function Products() {
         }}
         onImageChanged={() => void reload()}
       />
+      <ImportDialog kind="products" open={importing} onClose={() => setImporting(false)} onDone={() => void reload()} />
     </div>
   )
 }
@@ -1217,6 +1223,7 @@ function Suppliers() {
   const { data, error, loading, reload } = useApi<Supplier[]>('/suppliers')
   const [editing, setEditing] = useState<{ id: string | null; form: SupplierForm } | null>(null)
   const [busy, setBusy] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   const save = async () => {
     if (!editing) return
@@ -1239,9 +1246,14 @@ function Suppliers() {
 
   return (
     <div className="grid gap-3">
-      <Button className="cursor-pointer justify-self-start" onClick={() => setEditing({ id: null, form: { name: '', phone: null, note: null, isActive: true } })}>
-        <Plus /> เพิ่มผู้จำหน่าย
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button className="cursor-pointer" onClick={() => setEditing({ id: null, form: { name: '', phone: null, note: null, isActive: true } })}>
+          <Plus /> เพิ่มผู้จำหน่าย
+        </Button>
+        <Button variant="outline" className="cursor-pointer" onClick={() => setImporting(true)}>
+          <FileSpreadsheet /> นำเข้า Excel
+        </Button>
+      </div>
       {error ? <ErrorBox message={error} onRetry={() => void reload()} /> : null}
       {loading && !data ? <Loading /> : null}
       {data?.length === 0 ? <Empty title="ยังไม่มีผู้จำหน่าย" /> : null}
@@ -1304,6 +1316,7 @@ function Suppliers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ImportDialog kind="suppliers" open={importing} onClose={() => setImporting(false)} onDone={() => void reload()} />
     </div>
   )
 }
