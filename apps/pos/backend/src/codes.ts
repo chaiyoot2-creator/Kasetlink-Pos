@@ -24,23 +24,33 @@ export function ean13CheckDigit(first12: string): number {
   return (10 - (sum % 10)) % 10
 }
 
-export async function nextSku(ctx: RequestCtx): Promise<string> {
+export function formatSku(n: number): string {
+  return `${SKU_PREFIX}${pad(n, 5)}`
+}
+
+export function formatBarcode(n: number): string {
+  if (n > 9_999_999_999) throw new HttpError(409, 'เลขบาร์โค้ดภายในร้านเต็มแล้ว', 'barcode_exhausted')
+  const body = `${EAN_PREFIX}${pad(n, 10)}`
+  return `${body}${ean13CheckDigit(body)}`
+}
+
+/** Highest number used by auto-generated SKUs (`P00042` → 42) and in-store barcodes. */
+export async function maxCodeNumbers(ctx: RequestCtx): Promise<{ sku: number; barcode: number }> {
   const rows = await query(
     ctx,
-    `SELECT COALESCE(MAX(substring(sku FROM '^${SKU_PREFIX}([0-9]{1,9})$')::bigint), 0) AS n FROM products`,
+    `SELECT COALESCE(MAX(substring(sku FROM '^${SKU_PREFIX}([0-9]{1,9})$')::bigint), 0) AS sku,
+            COALESCE(MAX(substring(barcode FROM '^${EAN_PREFIX}([0-9]{10})[0-9]$')::bigint), 0) AS barcode
+       FROM products`,
   )
-  return `${SKU_PREFIX}${pad(num(rows[0] ?? {}, 'n') + 1, 5)}`
+  return { sku: num(rows[0] ?? {}, 'sku'), barcode: num(rows[0] ?? {}, 'barcode') }
+}
+
+export async function nextSku(ctx: RequestCtx): Promise<string> {
+  return formatSku((await maxCodeNumbers(ctx)).sku + 1)
 }
 
 export async function nextBarcode(ctx: RequestCtx): Promise<string> {
-  const rows = await query(
-    ctx,
-    `SELECT COALESCE(MAX(substring(barcode FROM '^${EAN_PREFIX}([0-9]{10})[0-9]$')::bigint), 0) AS n FROM products`,
-  )
-  const next = num(rows[0] ?? {}, 'n') + 1
-  if (next > 9_999_999_999) throw new HttpError(409, 'เลขบาร์โค้ดภายในร้านเต็มแล้ว', 'barcode_exhausted')
-  const body = `${EAN_PREFIX}${pad(next, 10)}`
-  return `${body}${ean13CheckDigit(body)}`
+  return formatBarcode((await maxCodeNumbers(ctx)).barcode + 1)
 }
 
 export async function nextCustomerCode(ctx: RequestCtx): Promise<string> {

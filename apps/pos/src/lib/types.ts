@@ -12,8 +12,6 @@ export interface Settings {
   expiryAlertDays: number
   /** Names of price levels 1..5. */
   priceLevelNames: string[]
-  vatRegistered: boolean
-  vatRate: number
   /** Shop branch code for tax invoices (00000 = head office). */
   branchCode: string
 }
@@ -140,8 +138,6 @@ export interface SaleHeader {
   forAccounting: boolean
   taxInvoiceNo: string | null
   taxInvoiceAt: string | null
-  vatRate: number | null
-  vatAmount: number | null
   buyer: Buyer | null
   accountingSentAt: string | null
   /** Credit bills: payment due date (YYYY-MM-DD). */

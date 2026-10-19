@@ -306,7 +306,7 @@ function toLotIdentityRows(allocations: Allocation[]) {
   return [...map.values()]
 }
 
-function docHeaderOp(p: {
+export function docHeaderOp(p: {
   prefix: string
   docId: string
   docType: 'transfer' | 'adjustment'

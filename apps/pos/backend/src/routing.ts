@@ -20,12 +20,48 @@ export interface Matrix {
 const ROAD_FACTOR = 1.3
 const EST_SPEED_KMH = 45
 
+/** Backend-only key for the Routes API. Never returned to the browser. */
 export function serverMapsKey(): string | null {
   return process.env.GOOGLE_MAPS_SERVER_KEY?.trim() || process.env.GOOGLE_MAPS_API_KEY?.trim() || null
 }
 
+/**
+ * Key for the Maps JavaScript API in the browser. Only GOOGLE_MAPS_BROWSER_KEY is used
+ * (it must be restricted to the app's web address); a generic or server key is never sent.
+ */
 export function browserMapsKey(): string | null {
-  return process.env.GOOGLE_MAPS_BROWSER_KEY?.trim() || process.env.GOOGLE_MAPS_API_KEY?.trim() || null
+  const key = process.env.GOOGLE_MAPS_BROWSER_KEY?.trim() || null
+  if (!key) return null
+  if (key === serverMapsKey()) {
+    console.error('[maps] GOOGLE_MAPS_BROWSER_KEY equals the server key — not sending it to the browser. Use a separate referrer-restricted key.')
+    return null
+  }
+  return key
+}
+
+export type MapsKeyCheck = 'ok' | 'missing' | 'denied' | 'error'
+
+/** Calls the Routes API once with the server key and reports whether it works (no key in the result). */
+export async function checkServerKey(): Promise<{ status: MapsKeyCheck; detail: string | null }> {
+  const key = serverMapsKey()
+  if (!key) return { status: 'missing', detail: null }
+  try {
+    const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'routes.distanceMeters' },
+      body: JSON.stringify({
+        origin: waypoint({ lat: 19.9105, lng: 99.8406 }),
+        destination: waypoint({ lat: 19.92, lng: 99.85 }),
+        travelMode: 'DRIVE',
+      }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (res.ok) return { status: 'ok', detail: null }
+    const text = (await res.text()).slice(0, 300).split(key).join('***')
+    return { status: res.status === 401 || res.status === 403 ? 'denied' : 'error', detail: `HTTP ${res.status}: ${text}` }
+  } catch (err) {
+    return { status: 'error', detail: err instanceof Error ? err.message : 'network error' }
+  }
 }
 
 export function haversineKm(a: LatLng, b: LatLng): number {
