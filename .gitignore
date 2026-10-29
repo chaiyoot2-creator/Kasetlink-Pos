@@ -7,3 +7,5 @@ backend/.pgdata/
 backend/uploads/
 backend/.env.dev-owner
 *.tsbuildinfo
+.vercel
+.vercel-web/
