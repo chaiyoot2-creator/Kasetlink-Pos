@@ -1,0 +1,35 @@
+{
+  "name": "kasetlink-pos-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/index.ts src/migrate.ts --format esm --out-dir dist",
+    "start": "node dist/index.js",
+    "migrate": "node dist/migrate.js",
+    "migrate:dev": "tsx src/migrate.ts",
+    "typecheck": "tsc --noEmit",
+    "dev:db": "node scripts/dev-db.mjs"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.x",
+    "hono": "^4.x",
+    "zod": "^3.23.8",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.x",
+    "tsx": "^4.x",
+    "typescript": "^5.x",
+    "@types/pg": "^8.11.10",
+    "@types/node": "^22.10.0"
+  },
+  "allowScripts": {
+    "esbuild@0.27.7": true,
+    "esbuild@0.28.2": true,
+    "@embedded-postgres/windows-x64@17.2.0-beta.15": true
+  },
+  "optionalDependencies": {
+    "embedded-postgres": "^17.2.0-beta.15"
+  }
+}

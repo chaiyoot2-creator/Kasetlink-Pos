@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.env.local
+backend/.env
+backend/.pgdata/
+backend/uploads/
+backend/.env.dev-owner
+*.tsbuildinfo
