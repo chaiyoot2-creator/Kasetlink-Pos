@@ -1,0 +1,83 @@
+# KasetLink POS API + PostgreSQL on the Munjai VPS that already runs Coolify (and 888bike HR).
+# Coolify's Traefik (network "coolify") terminates HTTPS and issues the Let's Encrypt
+# certificate from the labels below; nothing binds host ports, Nginx/UFW are untouched.
+#
+#   cd /opt/kasetlink-pos && sudo docker compose -f deploy/coolify/docker-compose.yml --env-file .env up -d --build
+name: kasetlink-pos
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kasetlink_pos
+      POSTGRES_USER: pos_owner
+      POSTGRES_PASSWORD: ${OWNER_DB_PASSWORD:?}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C.UTF-8
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pos_owner -d kasetlink_pos"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+    image: kasetlink-pos-api:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # `pos` is NOSUPERUSER and owns the tables, so FORCE ROW LEVEL SECURITY applies to it.
+      DATABASE_URL: postgres://pos:${APP_DB_PASSWORD}@db:5432/kasetlink_pos
+      # Browsers reach the API through the Vercel rewrite, so image links use the web domain.
+      PUBLIC_API_URL: ${WEB_ORIGIN:?}
+      CORS_ORIGINS: ${WEB_ORIGIN}
+      RCLONE_REMOTE: ${RCLONE_REMOTE:-}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-30}
+    volumes:
+      - data:/data
+    networks: [internal, coolify]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.services.pos-api.loadbalancer.server.port=3001
+      # HTTP -> HTTPS
+      - traefik.http.routers.pos-api-http.rule=Host(`${API_HOST:?}`) && PathPrefix(`/api`)
+      - traefik.http.routers.pos-api-http.entrypoints=http
+      - traefik.http.routers.pos-api-http.middlewares=pos-https
+      - traefik.http.middlewares.pos-https.redirectscheme.scheme=https
+      # API
+      - traefik.http.routers.pos-api.rule=Host(`${API_HOST}`) && PathPrefix(`/api`)
+      - traefik.http.routers.pos-api.entrypoints=https
+      - traefik.http.routers.pos-api.tls=true
+      - traefik.http.routers.pos-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.pos-api.middlewares=pos-api-rate,pos-body
+      - traefik.http.middlewares.pos-api-rate.ratelimit.average=30
+      - traefik.http.middlewares.pos-api-rate.ratelimit.burst=90
+      - traefik.http.middlewares.pos-body.buffering.maxRequestBodyBytes=2097152
+      # Sign-in: stricter per-IP limit against password guessing
+      - traefik.http.routers.pos-auth.rule=Host(`${API_HOST}`) && (Path(`/api/auth/login`) || Path(`/api/auth/setup`))
+      - traefik.http.routers.pos-auth.entrypoints=https
+      - traefik.http.routers.pos-auth.tls=true
+      - traefik.http.routers.pos-auth.tls.certresolver=letsencrypt
+      - traefik.http.routers.pos-auth.middlewares=pos-auth-rate
+      - traefik.http.middlewares.pos-auth-rate.ratelimit.average=10
+      - traefik.http.middlewares.pos-auth-rate.ratelimit.period=1m
+      - traefik.http.middlewares.pos-auth-rate.ratelimit.burst=10
+
+volumes:
+  pgdata:
+  data:
+
+networks:
+  internal:
+  coolify:
+    external: true
