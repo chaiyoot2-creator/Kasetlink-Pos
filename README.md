@@ -106,4 +106,4 @@ npm --prefix backend run dev
 npm run dev
 ```
 
-เปิด http://localhost:5173 (Vite ส่ง `/api` ต่อไปที่ :3001) — บน Windows ให้วางโปรเจกต์ใน path สั้น ๆ (embedded-postgres ใช้ไม่ได้ถ้า path ยาวเกิน)
+เปิด http://localhost:5173 (Vite ส่ง `/api` ต่อไปที่ :3001)

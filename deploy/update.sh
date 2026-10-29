@@ -6,7 +6,7 @@ SRC_DIR=/opt/kasetlink-pos/src
 ENV_FILE=/etc/kasetlink-pos/api.env
 
 cd "$SRC_DIR/backend"
-npm ci --omit=optional --no-audit --no-fund
+npm ci --no-audit --no-fund
 npm run build
 npm prune --omit=dev --no-audit --no-fund
 

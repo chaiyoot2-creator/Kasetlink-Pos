@@ -8,8 +8,7 @@
     "start": "node dist/index.js",
     "migrate": "node dist/migrate.js",
     "migrate:dev": "tsx src/migrate.ts",
-    "typecheck": "tsc --noEmit",
-    "dev:db": "node scripts/dev-db.mjs"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hono/node-server": "^1.x",
@@ -28,8 +27,5 @@
     "esbuild@0.27.7": true,
     "esbuild@0.28.2": true,
     "@embedded-postgres/windows-x64@17.2.0-beta.15": true
-  },
-  "optionalDependencies": {
-    "embedded-postgres": "^17.2.0-beta.15"
   }
 }

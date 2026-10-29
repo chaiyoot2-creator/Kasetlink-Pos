@@ -3,7 +3,7 @@
 FROM node:22-alpine AS build
 WORKDIR /app/backend
 COPY backend/package.json backend/package-lock.json ./
-RUN npm ci --omit=optional
+RUN npm ci
 COPY backend/ ./
 RUN npm run build
 
@@ -15,7 +15,7 @@ ENV NODE_ENV=production HOST=0.0.0.0 PORT=3001 TZ=Asia/Bangkok \
     RCLONE_CONFIG=/data/rclone/rclone.conf
 WORKDIR /app/backend
 COPY backend/package.json backend/package-lock.json ./
-RUN npm ci --omit=dev --omit=optional && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/backend/dist ./dist
 COPY postgres/migrations /app/postgres/migrations
 RUN mkdir -p /data/uploads /data/backups /data/rclone && chown -R node:node /data
